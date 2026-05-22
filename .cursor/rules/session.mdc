@@ -1,0 +1,34 @@
+---
+description: LLMG research session — research-lead, work/KB, experiment delegation
+alwaysApply: true
+---
+
+# autoresearch-llmg session
+
+Research workspace. **Not** `~/cursor-dev` dev orchestration.
+
+## Primary role
+
+Invoke **`/research-lead`** in main chat.
+
+## Meridian
+
+```bash
+cd ~/gitrepos/research/autoresearch-llmg
+meridian work current
+meridian context kb
+```
+
+Work/KB paths: `research-coordination` skill. Remote: `haowjy/research-docs` (`llmg/work`, `llmg/kb`).
+
+## Delegation
+
+Match agent **description** (when); **model** in frontmatter. Spawn rules in agent
+**## Spawn** sections and `research-coordination`. Handoff-only — never paste agent bodies.
+
+GPU loops → **experiment-runner** (`gpt-5.3-codex`).
+
+## Skills layout
+
+Edit **`local-skills/`**, then `./scripts/sync.sh` (Mars base skills + rsync overlay).
+Do not edit overlay copies under `.cursor/skills/` directly.

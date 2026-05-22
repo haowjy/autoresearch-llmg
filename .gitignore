@@ -6,15 +6,19 @@ dist/
 wheels/
 *.egg-info
 
-# Virtual environments
-.venv
+.mars/
+mars.lock
+.agents/
+.venv/
+
+# Meridian work/kb: git@github.com:haowjy/research-docs.git (checkout in ~/.meridian/git/)
+.meridian/
 worktrees/
 results/
 queue/
 
-# Agent prompt files (generated per-session by launchers)
-CLAUDE.md
-AGENTS.md
+# Agent prompt files (generated per-session by launchers — not repo AGENTS.md)
+# CLAUDE.md
 
 # Experimental code/artifacts
 dev/

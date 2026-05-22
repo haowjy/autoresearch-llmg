@@ -1,0 +1,19 @@
+# LLMG research — work + KB in haowjy/research-docs (git).
+
+[context.work]
+source = "git"
+remote = "git@github.com:haowjy/research-docs.git"
+path = "llmg/work"
+archive = "archive/llmg/work"
+
+[context.kb]
+source = "git"
+remote = "git@github.com:haowjy/research-docs.git"
+path = "llmg/kb"
+
+[[hooks]]
+builtin = "git-autosync"
+remote = "git@github.com:haowjy/research-docs.git"
+
+[workspace.sibling-repos]
+path = "../.."
