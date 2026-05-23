@@ -1,6 +1,8 @@
 # LLMG roadmap (short index)
 
-Full experiment rows: KB `wiki/experiment-registry.md`.
+Full experiment rows: [experiment-registry.md][wiki-registry] (`llmg/kb/wiki/experiment-registry.md`).
+
+Program log: [RESEARCH-LOG.md][research-log]
 
 | Phase | Campaign slug | Gate | First experiment |
 |-------|---------------|------|------------------|
@@ -10,3 +12,10 @@ Full experiment rows: KB `wiki/experiment-registry.md`.
 | -1 | `phase-minus1-data-inventory` | — | P-1-01 corpus audit |
 
 **Hardware default:** RTX 3090 24GB, `google/gemma-4-E4B-it`, text-only, train 4k + long mix 8k/16k.
+
+---
+
+## References
+
+[wiki-registry]: https://github.com/haowjy/research-docs/blob/main/llmg/kb/wiki/experiment-registry.md
+[research-log]: ../RESEARCH-LOG.md

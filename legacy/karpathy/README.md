@@ -8,7 +8,9 @@ Upstream-style **pretrain hacking** snapshot: GPT on climbmix, metric `val_bpb`,
 | `prepare.py` | climbmix data + `evaluate_bpb` |
 | `program.md` | Original autonomous loop instructions |
 
-**Not used by LLMG.** Active harness: repo root `program.md`, `llmg/experiment.py`.
+**Not used by LLMG.** Active harness: [program.md][program-md], [llmg/experiment.py][llmg-experiment].
+
+See [0003-replace-karpathy-harness.md][dec-0003] in research-docs KB.
 
 Reproduce (optional):
 
@@ -16,3 +18,11 @@ Reproduce (optional):
 uv run prepare.py   # ~/.cache/autoresearch/
 uv run legacy/karpathy/train.py   # if wired; or copy train.py to root temporarily
 ```
+
+---
+
+## References
+
+[program-md]: ../../program.md
+[llmg-experiment]: ../../llmg/experiment.py
+[dec-0003]: https://github.com/haowjy/research-docs/blob/main/llmg/kb/decisions/0003-replace-karpathy-harness.md

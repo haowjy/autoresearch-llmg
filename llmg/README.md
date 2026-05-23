@@ -2,6 +2,8 @@
 
 Autoresearch loop over **frozen base + LoRA / RAG eval**, not pretrain.
 
+**Program research log:** [RESEARCH-LOG.md][research-log] (headline stats + campaign links).
+
 | Path | Role |
 |------|------|
 | `experiment.py` | **Runner-editable** (calibrate) or reads `experiments/<id>/config.yaml` (official) |
@@ -13,6 +15,14 @@ Autoresearch loop over **frozen base + LoRA / RAG eval**, not pretrain.
 | `ROADMAP.md` | Phase → campaign → gate |
 | `EXPERIMENTS.md` | Link to KB experiment registry |
 
-Charter: https://haowjy.github.io/blog/layered-latent-memory-grafts/
+Charter: [Layered Latent Memory Grafts][charter-blog]
 
-KB registry: `~/.meridian/git/haowjy-research-docs/llmg/kb/wiki/experiment-registry.md`
+KB registry: `llmg/kb/wiki/experiment-registry.md` in [research-docs][research-docs-repo]
+
+---
+
+## References
+
+[research-log]: ../RESEARCH-LOG.md
+[charter-blog]: https://haowjy.github.io/blog/layered-latent-memory-grafts/
+[research-docs-repo]: https://github.com/haowjy/research-docs

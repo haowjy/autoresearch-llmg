@@ -13,6 +13,15 @@ llmg/runs/20260523-121530_P0-TW-01/
 
 `llmg/runs/latest` points at the most recent run.
 
-Root [`results.tsv`](../../results.tsv) gets one row per run with a `run_dir` column.
+Root [results.tsv][results-tsv] gets one row per run with a `run_dir` column.
+
+Program index: [RESEARCH-LOG.md][research-log]
 
 These directories are gitignored; only this README is tracked.
+
+---
+
+## References
+
+[results-tsv]: ../../results.tsv
+[research-log]: ../../RESEARCH-LOG.md
