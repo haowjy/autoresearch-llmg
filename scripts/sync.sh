@@ -23,4 +23,6 @@ for skill in "${LOCAL_SKILLS[@]}"; do
   rsync -a "local-skills/$skill/" ".cursor/skills/$skill/"
 done
 
+"$(dirname "$0")/link-meridian-llmg.sh"
+
 echo "Done. Agents: .cursor/agents/"

@@ -6,7 +6,7 @@
 		},
 		{
 			"name": "meridian llmg (work + kb)",
-			"path": "../../../.meridian/git/haowjy-research-docs/llmg"
+			"path": "meridian-llmg"
 		}
 	],
 	"settings": {}

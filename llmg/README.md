@@ -2,7 +2,7 @@
 
 Autoresearch loop over **frozen base + LoRA / RAG eval**, not pretrain.
 
-**Program research log:** [RESEARCH-LOG.md][research-log] (headline stats + campaign links).
+**Setup:** [DEVELOPMENT.md][development] · **Program log:** [RESEARCH-LOG.md][research-log]
 
 | Path | Role |
 |------|------|
@@ -23,6 +23,7 @@ KB registry: `llmg/kb/wiki/experiment-registry.md` in [research-docs][research-d
 
 ## References
 
+[development]: ../DEVELOPMENT.md
 [research-log]: ../RESEARCH-LOG.md
 [charter-blog]: https://haowjy.github.io/blog/layered-latent-memory-grafts/
 [research-docs-repo]: https://github.com/haowjy/research-docs

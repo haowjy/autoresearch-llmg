@@ -8,7 +8,7 @@
 | **Campaign narrative** | `llmg/work/<slug>/experiment-log.md` in `haowjy/research-docs` | Interpretation, surprises, stage context |
 | **Machine runs** | `results.tsv` + `llmg/runs/<timestamp>_<id>/` | Every `llmg.run` attempt (local, untracked runs) |
 
-Charter: [Layered Latent Memory Grafts][charter-blog]
+Charter: [Layered Latent Memory Grafts][charter-blog] · Setup: [DEVELOPMENT.md][development]
 
 ---
 
@@ -80,6 +80,7 @@ Do **not** duplicate every calibrate run here; use the campaign log for narrativ
 ## References
 
 [charter-blog]: https://haowjy.github.io/blog/layered-latent-memory-grafts/
+[development]: DEVELOPMENT.md
 [tw-easy]: https://huggingface.co/datasets/saxenan3/temporalwiki-drift-cl-easy
 [experiments]: llmg/EXPERIMENTS.md
 [roadmap]: llmg/ROADMAP.md

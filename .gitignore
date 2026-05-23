@@ -13,6 +13,8 @@ mars.lock
 
 # Meridian work/kb: git@github.com:haowjy/research-docs.git (checkout in ~/.meridian/git/)
 .meridian/
+meridian-llmg
+
 worktrees/
 results/
 queue/

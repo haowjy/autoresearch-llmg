@@ -5,11 +5,14 @@ orchestration — use this repo's `.cursor/` and `/research-lead`.
 
 ## Quick start (Cursor)
 
+Full setup (why + commands): **[DEVELOPMENT.md](DEVELOPMENT.md)**
+
 ```bash
-cursor ~/gitrepos/research/research.code-workspace
+cd ~/gitrepos/research/autoresearch-llmg
+./scripts/sync.sh && ./scripts/link-meridian-llmg.sh
+cursor autoresearch-llmg.code-workspace
 /research-lead
-cd ~/gitrepos/research/autoresearch-llmg && meridian work start "my-campaign"
-./scripts/sync.sh   # first time: Mars base skills + local overlay
+meridian work start "my-campaign"
 ```
 
 ## Roles
