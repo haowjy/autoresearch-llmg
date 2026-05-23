@@ -3,10 +3,6 @@
 		{
 			"name": "harness (autoresearch-llmg)",
 			"path": "."
-		},
-		{
-			"name": "meridian llmg (work + kb)",
-			"path": "meridian-llmg"
 		}
 	],
 	"settings": {}

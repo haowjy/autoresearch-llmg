@@ -17,3 +17,7 @@ remote = "git@github.com:haowjy/research-docs.git"
 
 [workspace.sibling-repos]
 path = "../.."
+
+# Relative to autoresearch-llmg/ (workspace file dir). Used by scripts/link-meridian-llmg.sh
+[workspace.cursor]
+meridian_llmg = "../../../.meridian/git/haowjy-research-docs/llmg"

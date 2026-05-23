@@ -1,0 +1,11 @@
+experiment_id: P0-TW-01b
+run_mode: eval_only
+primary_metric: retrieval_recall@5
+description: BM25 retention — index train+stable articles; eval recall@k on stable
+
+params:
+  k: 5
+  index_splits:
+    - train
+    - stable
+  eval_split: stable

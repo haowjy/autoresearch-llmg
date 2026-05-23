@@ -10,7 +10,7 @@ Full setup (why + commands): **[DEVELOPMENT.md](DEVELOPMENT.md)**
 ```bash
 cd ~/gitrepos/research/autoresearch-llmg
 ./scripts/sync.sh && ./scripts/link-meridian-llmg.sh
-cursor autoresearch-llmg.code-workspace
+cursor autoresearch-llmg.local.code-workspace
 /research-lead
 meridian work start "my-campaign"
 ```
@@ -97,6 +97,7 @@ Details: `local-skills/research-artifacts/SKILL.md` (sync via `./scripts/sync.sh
 | `llmg/experiment.py` | Calibrate entry for autoresearch branches |
 | `llmg/experiments/<ID>/` | `config.yaml` + `runner.py` per experiment |
 | `llmg/runs/` | Per-run logs and metrics (gitignored except README) |
+| `llmg/DATASETS.md` | Benchmark & corpus links (active + planned) |
 | `results.tsv` | Tab-separated run index (untracked) |
 | `legacy/karpathy/` | Archived pretrain harness |
 

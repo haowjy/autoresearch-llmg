@@ -11,7 +11,7 @@ uv tool install hf && hf auth login
 hf download saxenan3/temporalwiki-drift-cl-easy --repo-type dataset
 ./scripts/sync.sh
 ./scripts/link-meridian-llmg.sh
-cursor autoresearch-llmg.code-workspace
+cursor autoresearch-llmg.local.code-workspace
 uv run python -m llmg.run --experiment P0-TW-01
 ```
 
@@ -24,7 +24,7 @@ uv run python -m llmg.run --experiment P0-TW-01
 | **Harness repo** (`autoresearch-llmg`) | Code: `llmg.run`, experiments, eval — git-tracked |
 | **Meridian checkout** | Campaign work + KB in `haowjy/research-docs` — separate git repo |
 | **Cursor workspace** | Two roots: harness + `llmg/` (work, kb) side by side |
-| **HF cache** | TemporalWiki + (later) Gemma weights |
+| **HF cache** | [TemporalWiki drift (easy)][tw-easy] + (later) [Gemma 4 E4B-it][gemma-e4b] |
 | **Local run artifacts** | `llmg/runs/`, `results.tsv` — not committed |
 
 Program status: [RESEARCH-LOG.md][research-log]. Agent rules: [AGENTS.md][agents].
@@ -83,45 +83,27 @@ Default checkout on disk:
 
 ## 3. Cursor / VS Code workspace
 
-**Why:** You edit harness code and Meridian markdown in one window. The workspace file is git-tracked so the layout is shared.
+**Why:** You edit harness code and Meridian markdown in one window.
 
-**File:** [autoresearch-llmg.code-workspace][workspace-file]
+### Paths that do *not* work in `folders[].path`
 
-| Root | Path in workspace |
-|------|-------------------|
-| Harness | `.` (this repo) |
-| Meridian llmg | `meridian-llmg` (symlink — see below) |
+| Path | What Cursor does |
+|------|------------------|
+| `~/.meridian/git/.../llmg` | **Not** `$HOME`. Resolves to `autoresearch-llmg/~/.meridian/...` (missing). |
+| `${userHome}/.meridian/...` | Variables are not expanded in workspace folder paths. |
 
-### Why not `${userHome}` in the workspace file?
-
-VS Code/Cursor **do not** expand `${userHome}`, `${env:…}`, or other variables in multi-root **`folders[].path`** entries (only in tasks, launch, and some settings). A literal `${userHome}/.meridian/...` path would not work.
-
-### Symlink `meridian-llmg/`
-
-**Why:** Stable repo-relative path that still points at the real Meridian checkout, resolved via CLI (same source of truth as `meridian context kb`).
+### Two-root setup (use this)
 
 ```bash
 ./scripts/link-meridian-llmg.sh
+cursor autoresearch-llmg.local.code-workspace
 ```
 
-This runs:
+Writes [autoresearch-llmg.local.code-workspace][workspace-local] (gitignored): harness always `"."`, Meridian path from [meridian.toml][meridian-toml] `[workspace.cursor] meridian_llmg` (default `../../../.meridian/git/haowjy-research-docs/llmg`). Edit that value if your checkout layout differs, then re-run the script. [scripts/sync.sh][sync-sh] runs the generator after skill sync.
 
-```bash
-KB="$(meridian context kb)"           # e.g. .../haowjy-research-docs/llmg/kb
-ln -sfn "$(dirname "$KB")" meridian-llmg   # → .../haowjy-research-docs/llmg
-```
+**Git-tracked fallback:** [autoresearch-llmg.code-workspace][workspace-file] — harness only (one root; always opens).
 
-- `meridian-llmg/` is **gitignored** (machine-specific target).
-- [scripts/sync.sh][sync-sh] runs the link script after skill sync.
-- Re-run after Meridian reclones or if the workspace folder looks empty.
-
-**Open:**
-
-```bash
-cursor autoresearch-llmg.code-workspace
-```
-
-**Alternative:** `~/gitrepos/research/research.code-workspace` opens harness + entire `~/.meridian/git` (broader; see parent folder).
+**Alternative:** parent `research.code-workspace` opens harness + all of `~/.meridian/git`.
 
 ---
 
@@ -133,7 +115,7 @@ cursor autoresearch-llmg.code-workspace
 ./scripts/sync.sh
 ```
 
-Does: `meridian mars sync` → rsync `local-skills/*` → `link-meridian-llmg.sh`.
+Does: `meridian mars sync` → rsync `local-skills/*` → generate local workspace.
 
 Edit research skills in `local-skills/`, not directly under `.cursor/skills/` (sync overwrites).
 
@@ -182,7 +164,11 @@ uv run python -m llmg.run --experiment P0-TW-01
 
 List experiments: `uv run python -m llmg.run --list`.
 
-**P0-TW-01:** BM25 retrieval on TemporalWiki — **no LLM**, ~93% `retrieval_recall@5` on `test` (establish RAG floor).
+**P0-TW-01:** BM25 on [tw-easy][tw-easy], train index, eval `test` — acquisition floor (~93% recall@5).
+
+**P0-TW-01b:** Same dataset, **train+stable** index, eval `stable` — retention (~76% recall@5).
+
+**All dataset links:** [llmg/DATASETS.md][datasets] (StreamingQA, PAT-Questions, books, etc.).
 
 ---
 
@@ -208,10 +194,12 @@ autoresearch-llmg/
   RESEARCH-LOG.md         ← program experiment index
   AGENTS.md               ← Cursor agent instructions
   meridian.toml           ← research-docs remote
-  autoresearch-llmg.code-workspace
-  meridian-llmg/          ← symlink (gitignored)
+  autoresearch-llmg.code-workspace       ← harness-only (git)
+  autoresearch-llmg.local.code-workspace ← two roots (gitignored; run link script)
   llmg/                   ← active harness
+    DATASETS.md           ← benchmark & corpus links
     experiments/P0-TW-01/
+    experiments/P0-TW-01b/
     runs/                 ← per-run artifacts (gitignored)
   legacy/karpathy/        ← archived pretrain harness
   program.md              ← still Karpathy-oriented (rewrite pending)
@@ -225,9 +213,9 @@ Karpathy root `train.py` / `prepare.py` remain for upstream comparison; LLMG wor
 
 | Problem | Fix |
 |---------|-----|
-| Empty **meridian llmg** root in Cursor | Run `./scripts/link-meridian-llmg.sh` |
+| Empty **meridian llmg** root in Cursor | Run `./scripts/link-meridian-llmg.sh`; open `autoresearch-llmg.local.code-workspace` (not `~` in the git-tracked workspace) |
 | `hf download` “model not found” for TemporalWiki | Add `--repo-type dataset` |
-| `stable` split 0% recall on P0-TW-01 | Expected with train-only index; retention needs `stable` articles in index (follow-up experiment) |
+| `stable` split 0% recall on P0-TW-01 | Expected with train-only index; use **P0-TW-01b** (train+stable index) for retention metrics |
 | Meridian path wrong | `meridian context kb` — should be under `~/.meridian/git/haowjy-research-docs/llmg/kb` |
 | Skills stale | `./scripts/sync.sh` |
 
@@ -243,6 +231,9 @@ Karpathy root `train.py` / `prepare.py` remain for upstream comparison; LLMG wor
 [meridian-toml]: meridian.toml
 [meridian]: https://github.com/haowjy/meridian
 [workspace-file]: autoresearch-llmg.code-workspace
+[workspace-local]: autoresearch-llmg.local.code-workspace
 [sync-sh]: scripts/sync.sh
 [local-skills]: local-skills/
 [gemma-e4b]: https://huggingface.co/google/gemma-4-E4B-it
+[tw-easy]: https://huggingface.co/datasets/saxenan3/temporalwiki-drift-cl-easy
+[datasets]: llmg/DATASETS.md

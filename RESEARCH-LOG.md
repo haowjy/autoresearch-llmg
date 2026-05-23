@@ -19,7 +19,8 @@ Gate decisions use `run_phase=official` only.
 
 | Experiment | Status | Primary metric | Best score | Commit | Latest run |
 |------------|--------|----------------|------------|--------|------------|
-| P0-TW-01 | done | `retrieval_recall@5` | **0.9333** | `657edff` | `llmg/runs/20260523-123136_P0-TW-01` |
+| P0-TW-01 | done | `retrieval_recall@5` (test, train index) | **0.9333** | `657edff` | `llmg/runs/20260523-123136_P0-TW-01` |
+| P0-TW-01b | done | `retrieval_recall@5` (stable, train+stable index) | **0.7600** | `70d57d6` | `llmg/runs/20260523-154507_P0-TW-01b` |
 | P0-TW-03 | planned | hybrid recall@5 | — | — | — |
 | P1-02 | planned | TBD (LoRA + RAG) | — | — | — |
 
@@ -28,10 +29,18 @@ Gate decisions use `run_phase=official` only.
 ### Program snapshot
 
 - **Phase 0 (RAG floor):** [P0-TW-01][p0-tw-01] passed — BM25 on [TemporalWiki][tw-easy] `train` index, **93.3%** recall@5 on `test` (150 rows, no LLM).
-- **Open issue:** `stable` retention eval needs index including `stable` articles (train-only index → 0% recall).
+- **Retention:** [P0-TW-01b][p0-tw-01b] — train+stable index, **76.0%** recall@5 on `stable` (50 rows); same index **94.7%** on `test` (`retrieval_recall@5_test_same_index`).
 - **Next:** P0-TW-03 hybrid RAG → Gemma answer eval → QLoRA calibrate.
 
-See also: [EXPERIMENTS.md][experiments] · [ROADMAP.md][roadmap]
+See also: [EXPERIMENTS.md][experiments] · [ROADMAP.md][roadmap] · [DATASETS.md][datasets]
+
+---
+
+## Datasets (catalog)
+
+**In harness:** [TemporalWiki drift (easy)][tw-easy] (`P0-TW-01`, `P0-TW-01b`).
+
+**Roadmap / literature:** [full dataset index][datasets] (StreamingQA, PAT-Questions, ChronoQA, TemporalWiki 2022, narrative benchmarks, unlearning refs, custom repo/story plans).
 
 ---
 
@@ -84,7 +93,10 @@ Do **not** duplicate every calibrate run here; use the campaign log for narrativ
 [tw-easy]: https://huggingface.co/datasets/saxenan3/temporalwiki-drift-cl-easy
 [experiments]: llmg/EXPERIMENTS.md
 [roadmap]: llmg/ROADMAP.md
+[datasets]: llmg/DATASETS.md
 [p0-tw-01]: llmg/experiments/P0-TW-01
+[p0-tw-01b]: llmg/experiments/P0-TW-01b
+[run-p0-tw-01b]: llmg/runs/20260523-154507_P0-TW-01b
 [run-latest]: llmg/runs/20260523-123136_P0-TW-01
 [runs-latest]: llmg/runs/latest
 [results-tsv]: results.tsv

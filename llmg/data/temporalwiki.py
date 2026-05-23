@@ -18,3 +18,13 @@ def dedupe_articles(split: Dataset) -> dict[str, str]:
         key = row["subject_sitelink"]
         corpus[key] = row["article"]
     return corpus
+
+
+def merge_corpus_splits(ds: DatasetDict, splits: list[str]) -> dict[str, str]:
+    """Union article corpora from named splits (later splits override same subject)."""
+    corpus: dict[str, str] = {}
+    for name in splits:
+        if name not in ds:
+            raise KeyError(f"split {name!r} not in dataset (have {list(ds.keys())})")
+        corpus.update(dedupe_articles(ds[name]))
+    return corpus

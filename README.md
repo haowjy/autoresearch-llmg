@@ -8,9 +8,24 @@
 
 [Layered Latent Memory Grafts][charter-blog] — post-training hacking (frozen base + LoRA / RAG eval), not Karpathy pretrain.
 
-**Setup (workspace, Meridian, HF, first run):** [DEVELOPMENT.md][development]
+| Doc | Purpose |
+|-----|---------|
+| [DEVELOPMENT.md][development] | Workspace, Meridian, HF, first run |
+| [RESEARCH-LOG.md][research-log] | Program index (official scores) |
+| [llmg/DATASETS.md][datasets] | **All benchmark & corpus links** |
+| [AGENTS.md][agents] | Agent + research-log rules |
+| [llmg/EXPERIMENTS.md][experiments] | Experiment IDs + layout |
 
-[AGENTS.md][agents] · [RESEARCH-LOG.md][research-log] · harness [llmg/][llmg-pkg] · [legacy/karpathy/][legacy-karpathy]
+**Phase 0 (now):** RAG floor on [TemporalWiki drift (easy)][tw-easy] — `P0-TW-01` (acquisition / `test`) · `P0-TW-01b` (retention / `stable`). Next: hybrid `P0-TW-03`, then Gemma QLoRA.
+
+```bash
+uv sync
+hf download saxenan3/temporalwiki-drift-cl-easy --repo-type dataset
+uv run python -m llmg.run --list
+uv run python -m llmg.run --experiment P0-TW-01
+```
+
+Harness: [llmg/][llmg-pkg] · Karpathy pretrain archive: [legacy/karpathy/][legacy-karpathy]
 
 ---
 
@@ -111,5 +126,8 @@ MIT
 [development]: DEVELOPMENT.md
 [agents]: AGENTS.md
 [research-log]: RESEARCH-LOG.md
+[datasets]: llmg/DATASETS.md
+[experiments]: llmg/EXPERIMENTS.md
+[tw-easy]: https://huggingface.co/datasets/saxenan3/temporalwiki-drift-cl-easy
 [legacy-karpathy]: legacy/karpathy/
 [llmg-pkg]: llmg/

@@ -5,6 +5,8 @@ Canonical catalog: [experiment-registry.md][wiki-registry]
 
 Program index: [RESEARCH-LOG.md][research-log]
 
+**Datasets (all links):** [DATASETS.md][datasets]
+
 Log format in root `results.tsv`:
 
 ```
@@ -52,4 +54,5 @@ uv run python -m llmg.run --experiment P0-TW-01 --param k=10
 [wiki-registry]: https://github.com/haowjy/research-docs/blob/main/llmg/kb/wiki/experiment-registry.md
 [research-docs-repo]: https://github.com/haowjy/research-docs
 [research-log]: ../RESEARCH-LOG.md
+[datasets]: DATASETS.md
 [runs-readme]: runs/README.md
