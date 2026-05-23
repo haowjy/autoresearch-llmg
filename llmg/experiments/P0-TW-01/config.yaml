@@ -1,0 +1,8 @@
+experiment_id: P0-TW-01
+run_mode: eval_only
+primary_metric: retrieval_recall@5
+description: BM25 over TemporalWiki train articles; eval recall@k
+
+params:
+  k: 5
+  eval_split: test

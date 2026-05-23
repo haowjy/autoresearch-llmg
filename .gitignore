@@ -25,3 +25,7 @@ dev/
 
 # Results file
 results.tsv
+
+# Per-run logs and metrics (see llmg/runs/README.md)
+llmg/runs/*
+!llmg/runs/README.md
