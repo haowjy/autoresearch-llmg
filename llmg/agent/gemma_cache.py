@@ -37,11 +37,36 @@ class EpisodeKVCache:
     def known_token_ids(self) -> list[int]:
         return list(self._known)
 
+    def revert_to_length(self, length: int) -> None:
+        """Drop generated suffix; keep KV aligned with chat-template prompt only."""
+        if length < 0 or length > len(self._known):
+            raise ValueError(f"invalid revert length {length}")
+        if length == len(self._known):
+            return
+        if length == 0:
+            self.reset()
+            return
+        if self._past is None:
+            self._known = self._known[:length]
+            self._last_logits = None
+            return
+        try:
+            self._past.crop(length)
+        except ValueError:
+            self.reset()
+            return
+        self._known = self._known[:length]
+        self._last_logits = None
+
     def sync_to(self, target_ids: list[int]) -> None:
         """Forward any prompt tokens not yet in the KV cache (one token at a time)."""
         lcp = longest_common_prefix_len(self._known, target_ids)
         if self._past is not None and len(self._known) > lcp:
-            self._past.crop(lcp)
+            try:
+                self._past.crop(lcp)
+            except ValueError:
+                self.reset()
+                lcp = 0
             self._known = self._known[:lcp]
         for tid in target_ids[len(self._known) :]:
             token = self._token_tensor(tid)

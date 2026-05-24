@@ -154,7 +154,10 @@ class GemmaAgentLoop:
             self._episode_kv = EpisodeKVCache(self._model, self._model.device)
         prompt_ids = self._prompt_token_ids(messages, tools)
         self._episode_kv.sync_to(prompt_ids)
+        prompt_len = len(self._episode_kv.known_token_ids)
         new_token_ids = self._episode_kv.greedy_generate(_MAX_NEW_TOKENS)
+        # Next turn re-tokenizes structured messages; drop decode suffix from KV.
+        self._episode_kv.revert_to_length(prompt_len)
         return self._tokenizer.decode(new_token_ids, skip_special_tokens=False)
 
     def _parse_response(self, text: str) -> dict[str, Any]:
