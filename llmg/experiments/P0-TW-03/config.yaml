@@ -1,0 +1,100 @@
+experiment_id: P0-TW-03
+run_mode: eval_only
+primary_metric: retrieval_recall@5
+description: Phased Phase 0 baseline sweep — stores, harness, agent (matrix)
+
+params:
+  k: 5
+  max_agent_steps: 8
+  agent_model: google/gemma-4-E4B-it
+  agent_heuristic_bootstrap: false
+  max_eval_rows: null
+  waves: null
+  skip_agent: false
+
+  wave_a_cells:
+    - data_format: memory
+      index_mode: train
+      search_mode: harness_bm25
+      eval_split: test
+    - data_format: memory
+      index_mode: train_stable
+      search_mode: harness_bm25
+      eval_split: stable
+    - data_format: sqlite
+      index_mode: train
+      search_mode: harness_bm25
+      eval_split: test
+    - data_format: sqlite
+      index_mode: train_stable
+      search_mode: harness_bm25
+      eval_split: stable
+    - data_format: filesystem
+      index_mode: train
+      search_mode: harness_bm25
+      eval_split: test
+    - data_format: filesystem
+      index_mode: train_stable
+      search_mode: harness_bm25
+      eval_split: stable
+    - data_format: filesystem
+      index_mode: train
+      search_mode: harness_rg
+      eval_split: test
+    - data_format: filesystem
+      index_mode: train_stable
+      search_mode: harness_rg
+      eval_split: stable
+    - data_format: memory
+      index_mode: train
+      search_mode: harness_hybrid
+      eval_split: test
+    - data_format: memory
+      index_mode: train_stable
+      search_mode: harness_hybrid
+      eval_split: stable
+    - data_format: sqlite
+      index_mode: train
+      search_mode: harness_hybrid
+      eval_split: test
+    - data_format: sqlite
+      index_mode: train_stable
+      search_mode: harness_hybrid
+      eval_split: stable
+    - data_format: filesystem
+      index_mode: train
+      search_mode: harness_hybrid
+      eval_split: test
+    - data_format: filesystem
+      index_mode: train_stable
+      search_mode: harness_hybrid
+      eval_split: stable
+
+  wave_b_cells:
+    - data_format: filesystem
+      index_mode: train
+      search_mode: agent_term_basic
+      eval_split: test
+    - data_format: filesystem
+      index_mode: train
+      search_mode: agent_term_hybrid
+      eval_split: test
+    - data_format: filesystem
+      index_mode: train_stable
+      search_mode: agent_term_basic
+      eval_split: stable
+    - data_format: filesystem
+      index_mode: train_stable
+      search_mode: agent_term_hybrid
+      eval_split: stable
+    - data_format: sqlite
+      index_mode: train_stable
+      search_mode: agent_term_basic
+      eval_split: stable
+    - data_format: filesystem
+      index_mode: train
+      search_mode: harness_bm25
+      eval_split: test
+      note: rg_tree_parity
+
+  wave_c_max_eval_rows: 30
