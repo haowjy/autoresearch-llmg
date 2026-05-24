@@ -397,11 +397,17 @@ def run(
         if row.get("status") != "ok" or row.get("wave") != "B":
             continue
         if row.get("search_mode") == "agent_term_basic" and row.get("eval_split") == "test":
+            metrics["retrieval_recall@5_shell"] = float(row.get("retrieval_recall@k", 0))
+            metrics["temporal_recall@5_shell"] = float(row.get("temporal_recall@k", 0))
+            metrics["answer_cosine_shell"] = float(row.get("answer_cosine", 0))
+            if "answer_cosine_hit_rate" in row:
+                metrics["answer_cosine_hit_rate_shell"] = float(row["answer_cosine_hit_rate"])
+        if row.get("search_mode") == "agent_term_hybrid" and row.get("eval_split") == "test":
+            metrics["retrieval_recall@5"] = float(row.get("retrieval_recall@k", 0))
             metrics["temporal_recall@5"] = float(row.get("temporal_recall@k", 0))
             metrics["answer_cosine"] = float(row.get("answer_cosine", 0))
             if "answer_cosine_hit_rate" in row:
                 metrics["answer_cosine_hit_rate"] = float(row["answer_cosine_hit_rate"])
-            break
 
     if "retrieval_recall@5" not in metrics and matrix_rows:
         ok = [r for r in matrix_rows if r.get("status") == "ok"]

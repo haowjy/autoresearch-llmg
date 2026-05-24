@@ -34,6 +34,10 @@ uv run python -m llmg.run --experiment P0-TW-03 --run-phase official --param max
 
 Disable heuristic pre-search (default off): `--param agent_heuristic_bootstrap=false`
 
+**Primary metric (official):** `retrieval_recall@5` is pinned to **hybrid agent + `test`**; shell agent is `retrieval_recall@5_shell` in `metrics.json`.
+
+**Answer analysis:** `uv run python scripts/analyze_agent_answers.py <run_dir> --cell <cell_id>` — splits answered vs no-submit rows.
+
 Skip GPU agent (harness-only):
 
 ```bash

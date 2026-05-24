@@ -1,0 +1,21 @@
+experiment_id: P1-02
+run_mode: train_eval
+primary_metric: retrieval_recall@5
+description: Protocol QLoRA on TemporalWiki + RAG eval vs P0-TW-03 ceiling
+
+params:
+  k: 5
+  eval_split: test
+  base_model: google/gemma-4-E4B-it
+  lora_rank: 16
+  lora_alpha: 32
+  train_epochs: 1
+  max_train_steps: null
+  max_eval_rows: null
+  learning_rate: 2.0e-4
+  train_batch_size: 1
+  gradient_accumulation_steps: 8
+  max_seq_len: 4096
+  corpus_index_mode: train_stable
+  rag_top_k: 5
+  use_hybrid_retrieval: true

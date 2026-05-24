@@ -45,6 +45,14 @@ Creates `.venv/` at repo root. Run experiments with `uv run python -m llmg.run`,
 
 **GPU:** Phase 0 (P0-TW-01) is CPU-only (BM25). LoRA phases need an NVIDIA GPU (target: RTX 3090 24GB, `google/gemma-4-E4B-it` QLoRA).
 
+**Optional — ripgrep** (P0-TW-03 `harness_rg` baseline):
+
+```bash
+sudo apt install ripgrep   # or: cargo install ripgrep
+```
+
+Without `rg` on `PATH`, the harness falls back to `grep` (agent sandbox) or Python scan; recall stays ~2% on `test`.
+
 ---
 
 ## 2. Meridian (work + KB)

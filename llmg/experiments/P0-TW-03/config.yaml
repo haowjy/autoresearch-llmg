@@ -1,5 +1,6 @@
 experiment_id: P0-TW-03
 run_mode: eval_only
+# Official Wave B pins retrieval_recall@5 to hybrid agent + test (see runner.py).
 primary_metric: retrieval_recall@5
 description: Phased Phase 0 baseline sweep — stores, harness, agent (matrix)
 

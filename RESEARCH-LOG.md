@@ -21,8 +21,8 @@ Gate decisions use `run_phase=official` only.
 |------------|--------|----------------|------------|--------|------------|
 | P0-TW-01 | done | `retrieval_recall@5` (test, train index) | **0.9333** | `657edff` | `llmg/runs/20260523-123136_P0-TW-01` |
 | P0-TW-01b | done | `retrieval_recall@5` (stable, train+stable index) | **0.7600** | `70d57d6` | `llmg/runs/20260523-154507_P0-TW-01b` |
-| P0-TW-03 | done | `retrieval_recall@5` (agent shell, test; Wave B) | **0.8400** | `23dfbbe` | `llmg/runs/20260524-023355_P0-TW-03` |
-| P1-02 | planned | TBD (LoRA + RAG) | — | — | — |
+| P0-TW-03 | done | `retrieval_recall@5` (hybrid agent, test; Wave B) | **1.0000** | `15e6c19` | `llmg/runs/20260524-023355_P0-TW-03` |
+| P1-02 | planned | `retrieval_recall@5` (LoRA + RAG) | — | `15e6c19` | — |
 
 *Last updated: 2026-05-24. P0-TW-03 **corpus v2** (~1004 versioned `doc_id`s) re-baselined; subject recall@5 on `test` is **~0.91** (was **0.93** on collapsed index).*
 
@@ -41,14 +41,27 @@ Orchestrator: [P0-TW-03][p0-tw-03]. Calibrate: [run-p0-tw-03-cal-v2][run-p0-tw-0
 
 Official Wave B ~84 min. Traces: structured JSONL under `agent_traces/`. Prior pre-v2 runs: [run-p0-tw-03-off][run-p0-tw-03-off].
 
-Calibrate Wave A ([run-p0-tw-03-cal-v2][run-p0-tw-03-cal-v2]): **BM25** recall/temporal **0.91** / **0.86** (`test`), **0.78** / **0.78** (`stable`); **hybrid** **0.97** / **0.95** (`test`), **0.90** / **0.90** (`stable`); **rg** ~0.02 / 0.01 (weak; no `ripgrep`).
+Calibrate Wave A ([run-p0-tw-03-cal-v2][run-p0-tw-03-cal-v2]): **BM25** recall/temporal **0.91** / **0.86** (`test`), **0.78** / **0.78** (`stable`); **hybrid** **0.97** / **0.95** (`test`), **0.90** / **0.90** (`stable`); **rg** ~0.02 / 0.01 (install [ripgrep][ripgrep] for real rg baseline).
+
+Shell agent (`test`): **0.84** recall / **0.65** temporal — pinned as `retrieval_recall@5_shell` in run metrics.
+
+### Answer quality (Gemma 4, `submit_answer`)
+
+Headline `answer_cosine` (~0.43–0.48) blends **empty submits** (no `submit_answer` before step limit). Re-score from traces ([analyze-agent-answers][analyze-agent-answers]):
+
+| Cell | EM (all rows) | cos≥0.85 (all) | cos mean (answered only) | cos≥0.85 (answered) | no submit |
+|------|---------------|----------------|--------------------------|---------------------|-----------|
+| shell, `test` | 0.29 | 0.29 | **0.65** | **0.43** | 51/150 |
+| hybrid, `test` | 0.34 | 0.34 | **0.65** | **0.47** | 41/150 |
+
+Among **answered** rows, ~**43–47%** are semantically on-target (MiniLM ≥0.85); ~**61%** have cosine ≥0.5. EM and cosine-hit rates match because short factual answers either match gold `object` or fall below 0.85. Retrieval can succeed while answers stay weak: shell **49%** subject-hit but cosine below 0.5; **29** rows have subject recall but wrong temporal slice.
 
 ### Program snapshot
 
 - **Phase 0 (RAG floor):** [P0-TW-01][p0-tw-01] passed — BM25 on [TemporalWiki][tw-easy] `train` index, **93.3%** recall@5 on `test` (150 rows, no LLM).
 - **Retention:** [P0-TW-01b][p0-tw-01b] — train+stable index, **76.0%** recall@5 on `stable` (50 rows); same index **94.7%** on `test` (`retrieval_recall@5_test_same_index`).
 - **Phase 0 matrix (P0-TW-03, corpus v2):** harness BM25 **0.91** / **0.78**; hybrid **0.97** / **0.90**; agent shell **0.84** / **0.94** (temporal **0.65** / **0.94**); agent + hybrid **1.0** / **0.96** retrieval; `answer_em` **0.29–0.42** with `submit_answer` validation.
-- **Next:** answer quality / EM; versioned memory ingest; QLoRA calibrate (**P1-02**).
+- **Next:** **P1-02** QLoRA calibrate; reduce no-submit rate; optional `ripgrep` for rg harness row.
 
 See also: [EXPERIMENTS.md][experiments] · [ROADMAP.md][roadmap] · [DATASETS.md][datasets]
 
@@ -120,6 +133,8 @@ Do **not** duplicate every calibrate run here; use the campaign log for narrativ
 [run-p0-tw-03-off]: llmg/runs/20260523-231910_P0-TW-03
 [run-p0-tw-03-off-v2]: llmg/runs/20260524-023355_P0-TW-03
 [run-p0-tw-03-hybrid]: llmg/runs/20260524-001722_P0-TW-03
+[analyze-agent-answers]: scripts/analyze_agent_answers.py
+[ripgrep]: https://github.com/BurntSushi/ripgrep#installation
 [run-p0-tw-03-off-legacy]: llmg/runs/20260523-180602_P0-TW-03
 [phase0-baselines]: https://github.com/haowjy/research-docs/blob/main/llmg/kb/wiki/phase0-baselines.md
 [run-p0-tw-01b]: llmg/runs/20260523-154507_P0-TW-01b
