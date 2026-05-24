@@ -151,7 +151,6 @@ def _run_agent_cell(
     k: int,
     max_agent_steps: int,
     agent_model: str,
-    agent_heuristic_bootstrap: bool,
     max_rows: int | None,
     corpus_cache: dict[str, Path],
     force_reexport: bool = False,
@@ -177,7 +176,6 @@ def _run_agent_cell(
         max_rows=max_rows,
         model_name=agent_model,
         trace_dir=trace_dir,
-        heuristic_bootstrap=agent_heuristic_bootstrap,
         agent_toolset=_agent_toolset(cell["search_mode"]),
     )
     return {
@@ -217,9 +215,8 @@ def _write_matrix_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
 def run(
     *,
     k: int = 5,
-    max_agent_steps: int = 8,
+    max_agent_steps: int = 16,
     agent_model: str = "google/gemma-4-E4B-it",
-    agent_heuristic_bootstrap: bool = False,
     max_eval_rows: int | None = None,
     waves: list[str] | None = None,
     skip_agent: bool = False,
@@ -312,7 +309,6 @@ def run(
                     k=k,
                     max_agent_steps=max_agent_steps,
                     agent_model=agent_model,
-                    agent_heuristic_bootstrap=agent_heuristic_bootstrap,
                     max_rows=max_eval_rows,
                     corpus_cache=corpus_cache,
                     force_reexport=force_reexport,

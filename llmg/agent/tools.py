@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import json
 import re
-import shlex
-import shutil
 from pathlib import Path
 from typing import Any, Callable, Literal
 
@@ -140,33 +138,6 @@ def _record_retrieval_from_tool(
                 _add(fs_store.doc_id_from_path(path))
 
 
-def _rg_to_grep(command: str) -> str | None:
-    """Map `rg -i PATTERN DIR` to `grep -ril PATTERN DIR` when ripgrep is absent."""
-    if shutil.which("rg"):
-        return None
-    parts = shlex.split(command)
-    if not parts or Path(parts[0]).name != "rg":
-        return None
-    args = parts[1:]
-    ignore_case = False
-    positional: list[str] = []
-    i = 0
-    while i < len(args):
-        if args[i] in ("-i", "--ignore-case"):
-            ignore_case = True
-            i += 1
-        elif args[i].startswith("-"):
-            i += 1
-        else:
-            positional.append(args[i])
-            i += 1
-    if len(positional) < 2:
-        return None
-    pattern, target = positional[0], positional[1]
-    flag = "-ril" if ignore_case else "-rl"
-    return f"grep {flag} {shlex.quote(pattern)} {shlex.quote(target)}"
-
-
 def make_tool_functions(
     *,
     sandbox: AgentSandbox,
@@ -189,13 +160,10 @@ def make_tool_functions(
         Returns:
             stdout and stderr from the command (truncated).
         """
-        alt = _rg_to_grep(command)
         try:
             result = sandbox.run(command)
         except Exception as exc:
             return f"error: {exc!r}"
-        if alt and result.returncode != 0 and not result.stdout:
-            result = sandbox.run(alt)
         parts = [f"exit_code={result.returncode}"]
         if result.stdout:
             parts.append(f"stdout:\n{result.stdout}")

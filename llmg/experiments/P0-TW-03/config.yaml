@@ -6,9 +6,8 @@ description: Phased Phase 0 baseline sweep — stores, harness, agent (matrix)
 
 params:
   k: 5
-  max_agent_steps: 8
+  max_agent_steps: 16
   agent_model: google/gemma-4-E4B-it
-  agent_heuristic_bootstrap: false
   max_eval_rows: null
   waves: null
   skip_agent: false

@@ -1,5 +1,7 @@
 # P0-TW-03 — phased Phase 0 baseline sweep
 
+**Canonical Phase 0 RAG** — supersedes deprecated [P0-TW-01](../P0-TW-01) and [P0-TW-01b](../P0-TW-01b) (exploratory collapsed-index runs).
+
 Single orchestrator experiment: exports TemporalWiki to **memory / SQLite / filesystem**, runs a **matrix** of harness and agent cells, writes `matrix_results.tsv` under the run dir.
 
 ## Waves
@@ -18,21 +20,27 @@ uv run python -m llmg.run --experiment P0-TW-03 --run-phase calibrate
 uv run python -m llmg.run --experiment P0-TW-03 --run-phase official
 ```
 
-Wave B is a **multi-turn agentic loop** on `google/gemma-4-E4B-it`:
+Wave B is a **raw agentic** loop on `google/gemma-4-E4B-it` — we measure native tool use, not coached behavior:
 
-1. **System** — search → read → (repeat) → `submit_answer`
-2. **Native tools** — `agent_term_basic`: `run_shell`, `read_file`, `submit_answer`; `agent_term_hybrid`: `search_hybrid`, `read_file`, `submit_answer` (see `llmg/search/hybrid.py`)
-3. Each turn: full `messages` list is passed through `apply_chat_template` (history stack grows: assistant + tool turns appended); loop continues until `submit_answer` or `max_agent_steps`
+| In scope | Out of scope (removed) |
+|----------|-------------------------|
+| Gemma 4 `apply_chat_template` + tool schemas | Mid-loop coaching on prose-only turns |
+| Allowlisted sandbox (`run_shell`, etc.) | Heuristic pre-search bootstrap |
+| Short system line + tool docstrings | Silent `rg` → `grep` retry |
+| `submit_answer` validation (scoring contract) | Per-turn “use search_hybrid…” nudges |
+| **One** final-step nudge (`max_steps - 2`) if still no answer | |
 
-Traces: `agent_traces/<cell>/row_<i>.jsonl` — structured episode log (`episode_start` … `assistant_turn` / `tool_result` / `sandbox` … `episode_end`). See [runs/README.md](../../runs/README.md).
+**Tools:** `agent_term_basic`: `run_shell`, `read_file`, `submit_answer`; `agent_term_hybrid`: `search_hybrid`, `read_file`, `submit_answer`.
+
+Each step: one model generation → optional tool calls → append to `messages` until `submit_answer` or `max_agent_steps`. Within a row, the Gemma loop reuses GPU KV cache across steps (reset per eval row); greedy decode matches full `model.generate` on the same prompt.
+
+Traces: `agent_traces/<cell>/row_<i>.jsonl` (`episode_start`, `assistant_turn`, `tool_result`, `sandbox`, `episode_end`). See [runs/README.md](../../runs/README.md).
 
 ```bash
 uv run python -m llmg.run --experiment P0-TW-03 --run-phase official
 # Smoke agent (5 rows):
 uv run python -m llmg.run --experiment P0-TW-03 --run-phase official --param max_eval_rows=5
 ```
-
-Disable heuristic pre-search (default off): `--param agent_heuristic_bootstrap=false`
 
 **Primary metric (official):** `retrieval_recall@5` is pinned to **hybrid agent + `test`**; shell agent is `retrieval_recall@5_shell` in `metrics.json`.
 

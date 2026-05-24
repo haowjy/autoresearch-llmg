@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from llmg.agent.gemma_cache import EpisodeKVCache
 from llmg.agent.sandbox import AgentSandbox
 from llmg.agent.state import AgentEpisodeState
 from llmg.agent.trace import (
@@ -41,16 +42,18 @@ log = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "google/gemma-4-E4B-it"
 _TOOL_MSG_MAX_CHARS = 6000
+_MAX_NEW_TOKENS = 384
 
-AGENTIC_SYSTEM_SHELL = """You answer questions using a local article corpus in articles/ (Markdown + YAML dates: valid_from, valid_to).
+# Minimal system text — tool schemas carry mechanics; one optional final-step nudge only.
+AGENTIC_SYSTEM_SHELL = (
+    "You are a research assistant with tools. The corpus is under articles/ (Markdown + YAML dates)."
+)
+AGENTIC_SYSTEM_HYBRID = (
+    "You are a research assistant with tools. The corpus is under articles/ (Markdown + YAML dates)."
+)
 
-Search with run_shell (rg/grep), read_file on hits, then call submit_answer exactly once with the minimal fact that answers the question (name, date, title, or number — not a sentence).
-Respect the question's as-of date when given."""
-
-AGENTIC_SYSTEM_HYBRID = """You answer questions using a local article corpus in articles/ (Markdown + YAML dates: valid_from, valid_to).
-
-Use search_hybrid, read_file on hits, then call submit_answer exactly once with the minimal fact that answers the question (name, date, title, or number — not a sentence).
-Respect the question's as-of date when given."""
+# One synthetic user turn when the episode is almost out of steps (not mid-loop coaching).
+FINAL_STEP_NUDGE = "Answer with submit_answer. You are taking too long."
 
 
 @dataclass
@@ -93,16 +96,15 @@ class GemmaAgentLoop:
         corpus_root: Path | None = None,
         model_name: str | None = None,
         max_steps: int = 8,
-        heuristic_bootstrap: bool = False,
         agent_toolset: AgentToolset = "shell",
     ) -> None:
         self.default_corpus_root = corpus_root
         self.model_name = model_name or os.environ.get("LLMG_AGENT_MODEL", DEFAULT_MODEL)
         self.max_steps = max_steps
-        self.heuristic_bootstrap = heuristic_bootstrap
         self.agent_toolset = agent_toolset
         self._model = None
         self._tokenizer = None
+        self._episode_kv: EpisodeKVCache | None = None
 
     def _load_model(self) -> None:
         if self._model is not None:
@@ -125,11 +127,18 @@ class GemmaAgentLoop:
             device_map="auto" if torch.cuda.is_available() else None,
         )
 
-    def _generate(self, messages: list[dict], tools: list) -> str:
-        import torch
+    def _reset_episode_kv(self) -> None:
+        if self._model is None:
+            self._episode_kv = None
+            return
+        if self._episode_kv is None:
+            self._episode_kv = EpisodeKVCache(self._model, self._model.device)
+        else:
+            self._episode_kv.reset()
 
-        assert self._tokenizer is not None and self._model is not None
-        inputs = self._tokenizer.apply_chat_template(
+    def _prompt_token_ids(self, messages: list[dict], tools: list) -> list[int]:
+        assert self._tokenizer is not None
+        batch = self._tokenizer.apply_chat_template(
             messages,
             tools=tools,
             add_generation_prompt=True,
@@ -137,21 +146,16 @@ class GemmaAgentLoop:
             return_dict=True,
             enable_thinking=False,
         )
-        device = self._model.device
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-        with torch.no_grad():
-            out = self._model.generate(
-                **inputs,
-                max_new_tokens=384,
-                do_sample=False,
-                pad_token_id=self._tokenizer.eos_token_id,
-            )
-        new_tokens = out[0, inputs["input_ids"].shape[1] :].detach().cpu()
-        text = self._tokenizer.decode(new_tokens, skip_special_tokens=False)
-        del inputs, out, new_tokens
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        return text
+        return batch["input_ids"][0].tolist()
+
+    def _generate(self, messages: list[dict], tools: list) -> str:
+        assert self._tokenizer is not None and self._model is not None
+        if self._episode_kv is None:
+            self._episode_kv = EpisodeKVCache(self._model, self._model.device)
+        prompt_ids = self._prompt_token_ids(messages, tools)
+        self._episode_kv.sync_to(prompt_ids)
+        new_token_ids = self._episode_kv.greedy_generate(_MAX_NEW_TOKENS)
+        return self._tokenizer.decode(new_token_ids, skip_special_tokens=False)
 
     def _parse_response(self, text: str) -> dict[str, Any]:
         assert self._tokenizer is not None
@@ -161,38 +165,10 @@ class GemmaAgentLoop:
             log.debug("parse_response failed: %s raw=%r", exc, text[:200])
             return {"role": "assistant", "content": _clean_answer(text)}
 
-    def _heuristic_search(self, question: str, retrieved_doc_ids: list[str]) -> None:
-        stop = frozenset(
-            {"who", "what", "when", "where", "which", "the", "and", "for", "as", "of", "is"}
-        )
-        terms = [
-            t
-            for t in re.findall(r"[a-z][a-z0-9]{2,}", question.lower())
-            if t not in stop and not re.fullmatch(r"20\d{2}", t)
-        ][:5]
-        articles = self.fs.load_all()
-        scored: list[tuple[int, str]] = []
-        for doc_id, art in articles.items():
-            text = (art.article + " " + art.subject_sitelink).lower()
-            score = sum(1 for t in terms if t in text)
-            if score:
-                scored.append((score, doc_id))
-        scored.sort(reverse=True)
-        for _, doc_id in scored[:5]:
-            if doc_id not in retrieved_doc_ids:
-                retrieved_doc_ids.append(doc_id)
-
     def _system_prompt(self) -> str:
         if self.agent_toolset in ("hybrid", "full"):
             return AGENTIC_SYSTEM_HYBRID
         return AGENTIC_SYSTEM_SHELL
-
-    def _nudge_continue(self) -> str:
-        if self.agent_toolset == "hybrid":
-            return "Use search_hybrid or read_file, then submit_answer."
-        if self.agent_toolset == "full":
-            return "Use search_hybrid, run_shell, or read_file, then submit_answer."
-        return "Use run_shell or read_file, then submit_answer."
 
     def _build_messages(self, question: str, as_of: str) -> list[dict[str, Any]]:
         user = question if not as_of else f"{question}\n\n(as-of: {as_of})"
@@ -212,7 +188,7 @@ class GemmaAgentLoop:
         trace_path: Path | None,
         episode: AgentEpisodeState,
     ) -> str:
-        """Each turn: apply_chat_template(full messages) → generate → append to messages."""
+        """Each turn: chat-template prompt → greedy decode (KV reused) → append to messages."""
         tool_list, tools_by_name = make_tool_functions(
             sandbox=sandbox,
             fs_store=fs_store,
@@ -220,17 +196,23 @@ class GemmaAgentLoop:
             toolset=self.agent_toolset,
         )
         answer = ""
-        nudge_sent = False
+        final_nudge_sent = False
 
         for step in range(self.max_steps):
-            if not episode.done and not nudge_sent and step >= self.max_steps - 2:
-                final_nudge = (
-                    "Call submit_answer now with only the minimal fact "
-                    "(e.g. organization name or date), not a full sentence."
+            if (
+                not episode.done
+                and not final_nudge_sent
+                and step >= self.max_steps - 2
+            ):
+                messages.append({"role": "user", "content": FINAL_STEP_NUDGE})
+                write_trace(
+                    trace_path,
+                    "user_nudge",
+                    step=step,
+                    content=FINAL_STEP_NUDGE,
+                    kind="final_step",
                 )
-                messages.append({"role": "user", "content": final_nudge})
-                write_trace(trace_path, "user_nudge", step=step, content=final_nudge)
-                nudge_sent = True
+                final_nudge_sent = True
 
             raw = self._generate(messages, tool_list)
             parsed = self._parse_response(raw)
@@ -289,15 +271,13 @@ class GemmaAgentLoop:
                     break
                 continue
 
-            nudge = self._nudge_continue()
-            messages.append({"role": "user", "content": nudge})
-            write_trace(trace_path, "user_nudge", step=step, content=nudge)
+            messages.append({"role": "assistant", "content": content or None})
             traces.append(
                 AgentStepTrace(
                     step=step,
                     response=raw[:2000],
                     tool_call=None,
-                    observation="(nudge: continue loop)",
+                    observation="(no tool calls)",
                 )
             )
 
@@ -336,10 +316,8 @@ class GemmaAgentLoop:
         traces: list[AgentStepTrace] = []
         episode = AgentEpisodeState()
 
-        if self.heuristic_bootstrap:
-            self._heuristic_search(question, retrieved_doc_ids)
-
         self._load_model()
+        self._reset_episode_kv()
         messages = self._build_messages(question, as_of)
         answer = self._run_agentic_loop(
             messages,
@@ -382,7 +360,6 @@ def run_agent_eval(
     max_rows: int | None = None,
     model_name: str | None = None,
     trace_dir: Path | None = None,
-    heuristic_bootstrap: bool = False,
     agent_toolset: AgentToolset = "shell",
 ) -> dict[str, float]:
     n = len(questions)
@@ -405,7 +382,6 @@ def run_agent_eval(
         corpus_root=corpus_root,
         model_name=model_name,
         max_steps=max_steps,
-        heuristic_bootstrap=heuristic_bootstrap,
         agent_toolset=agent_toolset,
     )
 
@@ -416,6 +392,8 @@ def run_agent_eval(
     total_cmds = 0
     total_bytes = 0
     results: list[AgentRunResult] = []
+
+    import torch
 
     for i in range(n):
         trace_path = trace_dir / f"row_{i}.jsonl" if trace_dir else None
@@ -447,6 +425,9 @@ def run_agent_eval(
         total_steps += result.steps
         total_cmds += result.cmd_count
         total_bytes += result.bytes_read
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
+            torch.cuda.empty_cache()
 
     cos_scores = answer_cosine_similarity_batch(
         [(r.answer, gold_answers[i]) for i, r in enumerate(results)]
