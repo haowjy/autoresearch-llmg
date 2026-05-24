@@ -1,5 +1,7 @@
 # P0-TW-01
 
+> **Status: deprecated** — exploratory Gate 0 history only (collapsed subject index). **Canonical baselines:** [P0-TW-03](../P0-TW-03/) harness BM25 on corpus v2 — `test` acquisition **~0.91** subject / **~0.86** temporal recall@5; see [phase0-baselines][phase0-baselines]. Runner kept for archaeology.
+
 **Gate:** none (RAG floor before LoRA)
 
 | Field | Value |
@@ -26,3 +28,4 @@ Campaign log: [experiment-log.md][campaign-log]
 
 [tw-easy]: https://huggingface.co/datasets/saxenan3/temporalwiki-drift-cl-easy
 [campaign-log]: https://github.com/haowjy/research-docs/blob/main/llmg/work/llmg-v1-first-experiment/experiment-log.md
+[phase0-baselines]: https://github.com/haowjy/research-docs/blob/main/llmg/kb/wiki/phase0-baselines.md

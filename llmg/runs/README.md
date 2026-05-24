@@ -25,7 +25,7 @@ Under `agent_traces/<cell_id>/row_<n>.jsonl` — one JSON object per line, typed
 | `assistant_turn` | raw model output, tool_calls, parsed content |
 | `tool_result` | tool name + observation (read_file / search_hybrid / submit_answer) |
 | `sandbox` | shell cmd, stdout/stderr (truncated), returncode |
-| `user_nudge` | loop continuation prompts |
+| `user_nudge` | Final-step only (`kind: final_step`) — ask for `submit_answer` near step limit |
 | `episode_end` | final answer, `retrieved_doc_ids`, step/cmd stats |
 
 Use `jq -c 'select(.type==\"tool_result\")' …` to inspect tool observations.

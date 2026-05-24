@@ -14,7 +14,7 @@ commit	run_phase	experiment_id	primary_metric	score	memory_gb	status	description
 ```
 
 - `run_phase`: `calibrate` | `official` (gates use **official** only)
-- `experiment_id`: e.g. `P0-TW-01`, `P1-02`
+- `experiment_id`: e.g. `P0-TW-03`, `P1-02` (deprecated: `P0-TW-01`, `P0-TW-01b`)
 - `run_dir`: path to per-run artifacts (see [runs/README.md][runs-readme])
 
 **Per-run observability:** each `uv run python -m llmg.run` writes:
@@ -31,7 +31,7 @@ llmg/runs/<timestamp>_<experiment_id>/
 Each primary experiment is a directory — **do not edit `llmg/run.py`** to add one:
 
 ```text
-llmg/experiments/P0-TW-01/
+llmg/experiments/P0-TW-03/
   config.yaml    # official locked params + primary_metric
   runner.py      # run(session=..., **params) implementation
   README.md      # short spec
@@ -39,9 +39,11 @@ llmg/experiments/P0-TW-01/
 
 ```bash
 uv run python -m llmg.run --list
-uv run python -m llmg.run --experiment P0-TW-01
-uv run python -m llmg.run --experiment P0-TW-01 --param k=10
+uv run python -m llmg.run --experiment P0-TW-03 --run-phase official
+uv run python -m llmg.run --experiment P0-TW-03 --param max_eval_rows=5
 ```
+
+Deprecated IDs (`P0-TW-01`, `P0-TW-01b`) remain runnable for archaeology; see per-experiment README.
 
 **Calibrate (autoresearch):** edit `llmg/experiment.py` (`ACTIVE_EXPERIMENT`) or hack on branch; runner may also edit `runner.py` on the calibrate branch.
 

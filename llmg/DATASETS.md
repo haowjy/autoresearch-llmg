@@ -15,8 +15,9 @@ Link style: narrative `[label][ref-id]`; full URLs only under [References](#refe
 
 ```bash
 hf download saxenan3/temporalwiki-drift-cl-easy --repo-type dataset
-uv run python -m llmg.run --experiment P0-TW-01    # acquisition, train index
-uv run python -m llmg.run --experiment P0-TW-01b   # retention, train+stable index
+uv run python -m llmg.run --experiment P0-TW-03 --run-phase calibrate   # harness matrix (v2)
+uv run python -m llmg.run --experiment P0-TW-03 --run-phase official  # pinned agent cells
+# Deprecated: P0-TW-01 / P0-TW-01b (collapsed index; archaeology only)
 ```
 
 **Snapshots (easy variant):** `2025-11-20` → `2025-12-01` → `2026-01-01` → `2026-02-01` (3 drift slices + stable probe). See [temporal-datasets wiki][wiki-temporal] in KB.

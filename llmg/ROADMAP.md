@@ -6,7 +6,7 @@ Program log: [RESEARCH-LOG.md][research-log]
 
 | Phase | Campaign slug | Gate | First experiment |
 |-------|---------------|------|------------------|
-| 0 | `phase0-temporalwiki-rag` | 0 (RAG ceiling) | **P0-TW-01** / **01b** / **03** done (Gate 0 passed); **P1-02** next |
+| 0 | `phase0-temporalwiki-rag` | 0 (RAG ceiling) | **P0-TW-03** done (Gate 0 passed); 01/01b deprecated; **P1-02** next |
 | 1 | `phase1-protocol-lora` | 1 | P1-02 protocol LoRA + RAG |
 | 2 | `phase2-stacked-lora` | 2 | P2 grid stacked vs rank-matched |
 | -1 | `phase-minus1-data-inventory` | — | P-1-01 corpus audit |

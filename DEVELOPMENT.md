@@ -43,7 +43,7 @@ uv sync
 
 Creates `.venv/` at repo root. Run experiments with `uv run python -m llmg.run`, not system Python.
 
-**GPU:** Phase 0 (P0-TW-01) is CPU-only (BM25). LoRA phases need an NVIDIA GPU (target: RTX 3090 24GB, `google/gemma-4-E4B-it` QLoRA).
+**GPU:** Phase 0 harness rows in **P0-TW-03** are CPU-only (BM25); Wave B agents need an NVIDIA GPU (target: RTX 3090 24GB, `google/gemma-4-E4B-it`). LoRA phases use the same GPU.
 
 **Optional — ripgrep** (P0-TW-03 `harness_rg` baseline):
 
@@ -161,20 +161,21 @@ Cache: `~/.cache/huggingface/hub/` (and `datasets` may use `~/.cache/huggingface
 **Why:** Validates harness, data, and observability before LoRA.
 
 ```bash
-uv run python -m llmg.run --experiment P0-TW-01
+uv run python -m llmg.run --experiment P0-TW-03 --run-phase calibrate
+uv run python -m llmg.run --experiment P0-TW-03 --run-phase official
 ```
 
 | Output | Location |
 |--------|----------|
-| Per-run bundle | `llmg/runs/<timestamp>_P0-TW-01/` (`run.log`, `metrics.json`, `summary.md`, …) |
+| Per-run bundle | `llmg/runs/<timestamp>_P0-TW-03/` (`run.log`, `metrics.json`, `matrix_results.tsv`, …) |
 | Latest symlink | `llmg/runs/latest/` |
 | Index row | `results.tsv` (untracked) |
 
 List experiments: `uv run python -m llmg.run --list`.
 
-**P0-TW-01:** BM25 on [tw-easy][tw-easy], train index, eval `test` — acquisition floor (~93% recall@5).
+**P0-TW-03 (canonical):** Versioned corpus v2 + harness/agent matrix on [tw-easy][tw-easy] — BM25 **~0.91** / **~0.78** recall@5 (`test` / `stable`); see [RESEARCH-LOG.md][research-log].
 
-**P0-TW-01b:** Same dataset, **train+stable** index, eval `stable` — retention (~76% recall@5).
+**Deprecated:** `P0-TW-01` / `P0-TW-01b` — collapsed-index BM25 archaeology only (~93% / ~76% official).
 
 **All dataset links:** [llmg/DATASETS.md][datasets] (StreamingQA, PAT-Questions, books, etc.).
 
@@ -206,8 +207,9 @@ autoresearch-llmg/
   autoresearch-llmg.local.code-workspace ← two roots (gitignored; run link script)
   llmg/                   ← active harness
     DATASETS.md           ← benchmark & corpus links
-    experiments/P0-TW-01/
-    experiments/P0-TW-01b/
+    experiments/P0-TW-03/     # canonical Phase 0
+    experiments/P0-TW-01/     # deprecated
+    experiments/P0-TW-01b/    # deprecated
     runs/                 ← per-run artifacts (gitignored)
   legacy/karpathy/        ← archived pretrain harness
   program.md              ← still Karpathy-oriented (rewrite pending)
@@ -223,7 +225,7 @@ Karpathy root `train.py` / `prepare.py` remain for upstream comparison; LLMG wor
 |---------|-----|
 | Empty **meridian llmg** root in Cursor | Run `./scripts/link-meridian-llmg.sh`; open `autoresearch-llmg.local.code-workspace` (not `~` in the git-tracked workspace) |
 | `hf download` “model not found” for TemporalWiki | Add `--repo-type dataset` |
-| `stable` split 0% recall on P0-TW-01 | Expected with train-only index; use **P0-TW-01b** (train+stable index) for retention metrics |
+| `stable` split 0% recall on deprecated P0-TW-01 | Expected with train-only index; use **P0-TW-03** `train_stable` + `stable` cells for retention |
 | Meridian path wrong | `meridian context kb` — should be under `~/.meridian/git/haowjy-research-docs/llmg/kb` |
 | Skills stale | `./scripts/sync.sh` |
 
