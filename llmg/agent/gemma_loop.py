@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from llmg.agent.gemma_cache import EpisodeKVCache
 from llmg.agent.sandbox import AgentSandbox
 from llmg.agent.state import AgentEpisodeState
 from llmg.agent.trace import (
@@ -104,7 +103,6 @@ class GemmaAgentLoop:
         self.agent_toolset = agent_toolset
         self._model = None
         self._tokenizer = None
-        self._episode_kv: EpisodeKVCache | None = None
 
     def _load_model(self) -> None:
         if self._model is not None:
@@ -127,18 +125,12 @@ class GemmaAgentLoop:
             device_map="auto" if torch.cuda.is_available() else None,
         )
 
-    def _reset_episode_kv(self) -> None:
-        if self._model is None:
-            self._episode_kv = None
-            return
-        if self._episode_kv is None:
-            self._episode_kv = EpisodeKVCache(self._model, self._model.device)
-        else:
-            self._episode_kv.reset()
+    def _generate(self, messages: list[dict], tools: list) -> str:
+        """One ``model.generate`` per turn (full chat template each step)."""
+        import torch
 
-    def _prompt_token_ids(self, messages: list[dict], tools: list) -> list[int]:
-        assert self._tokenizer is not None
-        batch = self._tokenizer.apply_chat_template(
+        assert self._tokenizer is not None and self._model is not None
+        inputs = self._tokenizer.apply_chat_template(
             messages,
             tools=tools,
             add_generation_prompt=True,
@@ -146,18 +138,17 @@ class GemmaAgentLoop:
             return_dict=True,
             enable_thinking=False,
         )
-        return batch["input_ids"][0].tolist()
-
-    def _generate(self, messages: list[dict], tools: list) -> str:
-        assert self._tokenizer is not None and self._model is not None
-        if self._episode_kv is None:
-            self._episode_kv = EpisodeKVCache(self._model, self._model.device)
-        prompt_ids = self._prompt_token_ids(messages, tools)
-        self._episode_kv.sync_to(prompt_ids)
-        prompt_len = len(self._episode_kv.known_token_ids)
-        new_token_ids = self._episode_kv.greedy_generate(_MAX_NEW_TOKENS)
-        # Next turn re-tokenizes structured messages; drop decode suffix from KV.
-        self._episode_kv.revert_to_length(prompt_len)
+        device = self._model.device
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        prompt_len = int(inputs["input_ids"].shape[1])
+        with torch.no_grad():
+            out = self._model.generate(
+                **inputs,
+                max_new_tokens=_MAX_NEW_TOKENS,
+                do_sample=False,
+                pad_token_id=self._tokenizer.eos_token_id,
+            )
+        new_token_ids = out[0, prompt_len:].detach().cpu().tolist()
         return self._tokenizer.decode(new_token_ids, skip_special_tokens=False)
 
     def _parse_response(self, text: str) -> dict[str, Any]:
@@ -191,7 +182,7 @@ class GemmaAgentLoop:
         trace_path: Path | None,
         episode: AgentEpisodeState,
     ) -> str:
-        """Each turn: chat-template prompt → greedy decode (KV reused) → append to messages."""
+        """Each turn: chat-template prompt → model.generate → append to messages."""
         tool_list, tools_by_name = make_tool_functions(
             sandbox=sandbox,
             fs_store=fs_store,
@@ -320,7 +311,6 @@ class GemmaAgentLoop:
         episode = AgentEpisodeState()
 
         self._load_model()
-        self._reset_episode_kv()
         messages = self._build_messages(question, as_of)
         answer = self._run_agentic_loop(
             messages,

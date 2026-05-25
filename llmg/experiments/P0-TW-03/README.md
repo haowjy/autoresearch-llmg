@@ -32,7 +32,11 @@ Wave B is a **raw agentic** loop on `google/gemma-4-E4B-it` — we measure nativ
 
 **Tools:** `agent_term_basic`: `run_shell`, `read_file`, `submit_answer`; `agent_term_hybrid`: `search_hybrid`, `read_file`, `submit_answer`.
 
-Each step: one model generation → optional tool calls → append to `messages` until `submit_answer` or `max_agent_steps`. Within a row, the Gemma loop reuses GPU KV cache across steps (reset per eval row); greedy decode matches full `model.generate` on the same prompt.
+**Defaults (`config.yaml`):** `max_agent_steps: 16`, `k: 5`, `agent_model: google/gemma-4-E4B-it`.
+
+Each step: full `apply_chat_template` + one `model.generate` call (within-turn KV is automatic) → tool calls → append to `messages` until `submit_answer` or `max_agent_steps`.
+
+**Baseline history:** official v2 used **8** steps ([20260524-023355](../../runs/20260524-023355_P0-TW-03)); current harness default is **16** (v3 official [20260524-163430](../../runs/20260524-163430_P0-TW-03) when complete).
 
 Traces: `agent_traces/<cell>/row_<i>.jsonl` (`episode_start`, `assistant_turn`, `tool_result`, `sandbox`, `episode_end`). See [runs/README.md](../../runs/README.md).
 

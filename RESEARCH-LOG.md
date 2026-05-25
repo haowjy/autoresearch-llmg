@@ -19,10 +19,22 @@ Gate decisions use `run_phase=official` only.
 
 | Experiment | Status | Primary metric | Best score | Commit | Latest run |
 |------------|--------|----------------|------------|--------|------------|
-| P0-TW-03 | done | `retrieval_recall@5` (hybrid agent, test; Wave B) | **1.0000** | `15e6c19` | `llmg/runs/20260524-023355_P0-TW-03` |
+| P0-TW-03 | re-baselining | `retrieval_recall@5` (hybrid agent, test; Wave B) | **1.0000** (v2) | `a0a4ee5` | `llmg/runs/20260524-163430_P0-TW-03` (in flight) |
 | P1-02 | planned | `retrieval_recall@5` (LoRA + RAG) | — | `15e6c19` | — |
 
-*Last updated: 2026-05-24. **Canonical Phase 0 RAG** = [P0-TW-03][p0-tw-03] corpus v2 (~1004 versioned `doc_id`s). Harness BM25 `test` subject recall@5 **~0.91** (supersedes collapsed-index **0.93**).*
+*Last updated: 2026-05-24. **Canonical Phase 0 RAG** = [P0-TW-03][p0-tw-03] corpus v2 (~1004 versioned `doc_id`s). Harness BM25 `test` subject recall@5 **~0.91** (supersedes collapsed-index **0.93**). Agent **official v3** (16 steps, raw loop; cross-turn KV removed) [in flight][run-p0-tw-03-off-v3]; headline recall still **v2** ([run-p0-tw-03-off-v2][run-p0-tw-03-off-v2]) until v3 completes.*
+
+### Agent policy (official v3 — current harness default)
+
+| Param | v2 official | v3 (current `config.yaml`) |
+|-------|-------------|----------------------------|
+| `max_agent_steps` | **8** | **16** |
+| Mid-loop nudges | removed earlier | **none** |
+| Final-step nudge | — | at `max_steps - 2`: “Answer with submit_answer…” |
+| Cross-turn KV | none | removed (v2-style `model.generate` per step) |
+| Heuristic bootstrap / `rg`→`grep` | off | off |
+
+Code: v3 agent loop (16 steps, no cross-turn cache). Smoke (2 rows/cell): [run-p0-tw-03-smoke-v3][run-p0-tw-03-smoke-v3]. Full official Wave B: [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3].
 
 ### Deprecated (collapsed index — archaeology)
 
@@ -35,7 +47,11 @@ Superseded by [P0-TW-03][p0-tw-03] v2 harness BM25 cells; runners remain for his
 
 ### P0-TW-03 pinned cells (corpus v2)
 
-Orchestrator: [P0-TW-03][p0-tw-03]. Calibrate: [run-p0-tw-03-cal-v2][run-p0-tw-03-cal-v2]. Official: [run-p0-tw-03-off-v2][run-p0-tw-03-off-v2]. KB: [phase0-baselines].
+Orchestrator: [P0-TW-03][p0-tw-03]. Calibrate: [run-p0-tw-03-cal-v2][run-p0-tw-03-cal-v2]. KB: [phase0-baselines].
+
+#### Official v2 — 8 agent steps (`15e6c19`, [run-p0-tw-03-off-v2][run-p0-tw-03-off-v2])
+
+Superseded for **agent** rows when v3 completes; harness calibrate unchanged.
 
 | Cell | recall@5 | temporal@5 | answer_em | answer_cosine | notes |
 |------|----------|--------------|-----------|---------------|-------|
@@ -46,7 +62,13 @@ Orchestrator: [P0-TW-03][p0-tw-03]. Calibrate: [run-p0-tw-03-cal-v2][run-p0-tw-0
 | sqlite + `agent_term_basic` + `stable` | **0.9400** | 0.9400 | 0.4200 | 0.740 | same as fs shell on stable |
 | fs + harness_bm25 + `test` (parity) | **0.9067** | 0.8600 | — | — | harness on exported corpus |
 
-Official Wave B ~84 min. Traces: structured JSONL under `agent_traces/`. Prior pre-v2 runs: [run-p0-tw-03-off][run-p0-tw-03-off].
+Official Wave B ~84 min. Traces: structured JSONL under `agent_traces/`.
+
+#### Official v3 — 16 agent steps (`a0a4ee5`, [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3])
+
+**In flight** (full `test` + `stable`; started 2026-05-24). Replace v2 table above when `matrix_results.tsv` lands. Smoke only (2 rows/cell): [run-p0-tw-03-smoke-v3][run-p0-tw-03-smoke-v3] — not comparable to full eval.
+
+Prior pre-v2 runs: [run-p0-tw-03-off][run-p0-tw-03-off].
 
 Calibrate Wave A ([run-p0-tw-03-cal-v2][run-p0-tw-03-cal-v2]): **BM25** recall/temporal **0.91** / **0.86** (`test`), **0.78** / **0.78** (`stable`); **hybrid** **0.97** / **0.95** (`test`), **0.90** / **0.90** (`stable`); **rg** ~0.02 / 0.01 (install [ripgrep][ripgrep] for real rg baseline).
 
@@ -54,7 +76,7 @@ Shell agent (`test`): **0.84** recall / **0.65** temporal — pinned as `retriev
 
 ### Answer quality (Gemma 4, `submit_answer`)
 
-Headline `answer_cosine` (~0.43–0.48) blends **empty submits** (no `submit_answer` before step limit). Re-score from traces ([analyze-agent-answers][analyze-agent-answers]):
+Numbers below are **v2 (8 steps)** until v3 official completes; 16 steps targets lower no-submit rate. Headline `answer_cosine` (~0.43–0.48) blends **empty submits** (no `submit_answer` before step limit). Re-score from traces ([analyze-agent-answers][analyze-agent-answers]):
 
 | Cell | EM (all rows) | cos≥0.85 (all) | cos mean (answered only) | cos≥0.85 (answered) | no submit |
 |------|---------------|----------------|--------------------------|---------------------|-----------|
@@ -65,7 +87,7 @@ Among **answered** rows, ~**43–47%** are semantically on-target (MiniLM ≥0.8
 
 ### Program snapshot
 
-- **Phase 0 (canonical):** [P0-TW-03][p0-tw-03] on [TemporalWiki][tw-easy] corpus v2 — harness BM25 **0.91** / **0.86** (`test` subject / temporal recall@5), **0.78** / **0.78** (`stable`); hybrid harness **0.97** / **0.90**; agent shell **0.84** / **0.94** (temporal **0.65** / **0.94**); hybrid agent **1.0** / **0.96** retrieval; `answer_em` **0.29–0.42** with `submit_answer` validation.
+- **Phase 0 (canonical):** [P0-TW-03][p0-tw-03] on [TemporalWiki][tw-easy] corpus v2 — harness BM25 **0.91** / **0.86** (`test`); hybrid harness **0.97** / **0.90**; agent **v2 (8 steps):** shell **0.84** / **0.65** temporal on `test`, hybrid **1.0** / **0.97**; **v3 (16 steps)** official re-baseline [in flight][run-p0-tw-03-off-v3].
 - **Gate 0:** passed on v2 matrix (2026-05-24); see [stage.md][campaign-stage].
 - **Deprecated (archaeology):** [P0-TW-01][p0-tw-01] / [P0-TW-01b][p0-tw-01b] — collapsed-index BM25 (**0.93** / **0.76** official); not comparable to v2 without re-baseline.
 - **Next:** **P1-02** QLoRA calibrate; reduce no-submit rate; optional `ripgrep` for rg harness row.
@@ -139,6 +161,8 @@ Do **not** duplicate every calibrate run here; use the campaign log for narrativ
 [run-p0-tw-03-cal-v2]: llmg/runs/20260524-020649_P0-TW-03
 [run-p0-tw-03-off]: llmg/runs/20260523-231910_P0-TW-03
 [run-p0-tw-03-off-v2]: llmg/runs/20260524-023355_P0-TW-03
+[run-p0-tw-03-off-v3]: llmg/runs/20260524-163430_P0-TW-03
+[run-p0-tw-03-smoke-v3]: llmg/runs/20260524-144153_P0-TW-03
 [run-p0-tw-03-hybrid]: llmg/runs/20260524-001722_P0-TW-03
 [analyze-agent-answers]: scripts/analyze_agent_answers.py
 [ripgrep]: https://github.com/BurntSushi/ripgrep#installation
