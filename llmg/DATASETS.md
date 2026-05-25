@@ -15,8 +15,11 @@ Link style: narrative `[label][ref-id]`; full URLs only under [References](#refe
 
 ```bash
 hf download saxenan3/temporalwiki-drift-cl-easy --repo-type dataset
-uv run python -m llmg.run --experiment P0-TW-03 --run-phase calibrate   # harness matrix (v2)
-uv run python -m llmg.run --experiment P0-TW-03 --run-phase official  # pinned agent cells
+hf download saxenan3/temporalwiki-drift-cl --repo-type dataset
+uv run python -m llmg.run --experiment P0-TW-03 --run-phase calibrate   # harness matrix (v2, easy)
+uv run python -m llmg.run --experiment P0-TW-03 --run-phase official  # pinned agent cells (easy)
+uv run python -m llmg.run --experiment P0-TW-04 --run-phase calibrate   # harder CL base (pinned harness)
+uv run python -m llmg.run --experiment P0-TW-04 --run-phase official  # pinned harness + agent (base)
 # Deprecated: P0-TW-01 / P0-TW-01b (collapsed index; archaeology only)
 ```
 

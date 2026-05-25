@@ -20,9 +20,10 @@ Gate decisions use `run_phase=official` only.
 | Experiment | Status | Primary metric | Best score | Commit | Latest run |
 |------------|--------|----------------|------------|--------|------------|
 | P0-TW-03 | ok | `retrieval_recall@5` (hybrid agent, test; Wave B) | **1.0000** (v3) | `f3c3bbe` | `llmg/runs/20260525-144755_P0-TW-03` |
+| P0-TW-04 | ok | `retrieval_recall@5` (hybrid agent, test; Wave B) | **1.0000** | `d894068` | `llmg/runs/20260525-184453_P0-TW-04` |
 | P1-02 | planned | `retrieval_recall@5` (LoRA + RAG) | — | `15e6c19` | — |
 
-*Last updated: 2026-05-25. **Canonical Phase 0 RAG** = [P0-TW-03][p0-tw-03] corpus v2 (~1004 versioned `doc_id`s). Harness BM25 `test` subject recall@5 **~0.91** (supersedes collapsed-index **0.93**). Agent **official v3** (16 steps, raw loop, tool cap 2000, `rg` on PATH): [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3] (~2h 15m, ok). Prior agent table: [v2 (8 steps)][run-p0-tw-03-off-v2]. See [shell methodology](#shell-agent-methodology-do-not-over-tune) below.*
+*Last updated: 2026-05-25. **Canonical Phase 0 RAG (easy)** = [P0-TW-03][p0-tw-03] corpus v2 (~1004 versioned `doc_id`s). Harness BM25 `test` subject recall@5 **~0.91** (supersedes collapsed-index **0.93**). Agent **official v3** (16 steps, raw loop, tool cap 2000, `rg` on PATH): [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3] (~2h 15m, ok). **Harder eval (base CL):** [P0-TW-04][p0-tw-04] on [tw-cl][tw-cl] — official [run-p0-tw-04-off][run-p0-tw-04-off] (~78m, ok): harness BM25 **0.77** / hybrid **0.98** `test`; hybrid agent still **1.0** / **0.99** (recall saturated). **Next:** [P0-TW-05][p0-tw-05] BM25-hard subset or tool ablation. Prior agent table: [v2 (8 steps)][run-p0-tw-03-off-v2]. See [shell methodology](#shell-agent-methodology-do-not-over-tune) below.*
 
 ### Agent policy (official v3 — current harness default)
 
@@ -46,6 +47,32 @@ Superseded by [P0-TW-03][p0-tw-03] v2 harness BM25 cells; runners remain for his
 |------------|--------|----------------|------------|--------|------------|
 | ~~P0-TW-01~~ | deprecated | `retrieval_recall@5` (test, train index) | 0.9333 | `657edff` | `llmg/runs/20260523-123136_P0-TW-01` |
 | ~~P0-TW-01b~~ | deprecated | `retrieval_recall@5` (stable, train+stable index) | 0.7600 | `70d57d6` | `llmg/runs/20260523-154507_P0-TW-01b` |
+
+### P0-TW-04 harder eval (drift CL base)
+
+Dataset: [saxenan3/temporalwiki-drift-cl][tw-cl] — same `train` / `test` / `stable` splits as easy; rows are **triples + articles** (no NL `question`). Eval queries use template `What is the {relation} of {subject} as of {snapshot}?` ([P0-TW-04][p0-tw-04]).
+
+| Phase | run_dir | BM25 `test` | hybrid `test` | status |
+|-------|---------|-------------|---------------|--------|
+| calibrate | [run-p0-tw-04-cal][run-p0-tw-04-cal] | **0.7667** / 0.74 temporal | **0.9800** / 0.96 temporal | ok |
+| official (pinned A+B) | [run-p0-tw-04-off][run-p0-tw-04-off] | **0.7667** / 0.74 | hybrid agent **1.0** / **0.99** | ok (~4667 s) |
+
+#### Official — pinned cells (`d894068`, [run-p0-tw-04-off][run-p0-tw-04-off])
+
+Agent policy = P0-TW-03 v3 (16 steps, tool cap 2000, `rg`). Eval queries: `cl_query_from_row` template.
+
+| Cell | recall@5 | temporal@5 | answer_em | answer_cosine | notes |
+|------|----------|--------------|-----------|---------------|-------|
+| fs + `agent_term_basic` + `test` | **0.7000** | **0.2867** | 0.0067 | 0.257 | shell |
+| fs + `agent_term_hybrid` + `test` | **1.0000** | **0.9933** | 0.0200 | 0.306 | hybrid; primary metric |
+| memory + `harness_bm25` + `test` | **0.7667** | **0.7400** | — | — | ↓ ~15 pts vs easy **0.91** |
+| memory + `harness_hybrid` + `test` | **0.9800** | **0.9600** | — | — | vs easy **0.97** / **0.95** |
+| memory + `harness_bm25` + `stable` | **0.7600** | **0.7600** | — | — | vs easy **0.78** |
+| memory + `harness_hybrid` + `stable` | **0.8400** | **0.8400** | — | — | vs easy **0.90** |
+
+vs [P0-TW-03 v3][run-p0-tw-03-off-v3]: hybrid agent recall still **1.0** (not harder for primary metric); shell recall **0.70** (↑ vs **0.69**) but temporal **0.29** (↓ vs **0.37**); harness BM25 separates (~**23%** `test` miss rate).
+
+Easy saturation motivated this hop; base CL separates **harness** lanes but not hybrid-agent recall@5. See [P0-TW-05][p0-tw-05] for next harder eval.
 
 ### P0-TW-03 pinned cells (corpus v2)
 
@@ -129,10 +156,11 @@ Among **answered** rows, ~**43–47%** are semantically on-target (MiniLM ≥0.8
 
 ### Program snapshot
 
-- **Phase 0 (canonical):** [P0-TW-03][p0-tw-03] on [TemporalWiki][tw-easy] corpus v2 — harness BM25 **0.91** / **0.86** (`test`); hybrid harness **0.97** / **0.90**; agent **v3 (16 steps):** shell **0.69** / **0.37** temporal on `test`, hybrid **1.0** / **0.95** ([official v3][run-p0-tw-03-off-v3]).
+- **Phase 0 (canonical, easy):** [P0-TW-03][p0-tw-03] on [TemporalWiki][tw-easy] corpus v2 — harness BM25 **0.91** / **0.86** (`test`); hybrid harness **0.97** / **0.90**; agent **v3 (16 steps):** shell **0.69** / **0.37** temporal on `test`, hybrid **1.0** / **0.95** ([official v3][run-p0-tw-03-off-v3]).
+- **Phase 0 (harder, base):** [P0-TW-04][p0-tw-04] on [tw-cl][tw-cl] — harness BM25 **0.77** / hybrid **0.98** `test`; hybrid agent **1.0** / **0.99** ([official][run-p0-tw-04-off]); shell **0.70** / **0.29**.
 - **Gate 0:** passed on v2 matrix (2026-05-24); see [stage.md][campaign-stage].
 - **Deprecated (archaeology):** [P0-TW-01][p0-tw-01] / [P0-TW-01b][p0-tw-01b] — collapsed-index BM25 (**0.93** / **0.76** official); not comparable to v2 without re-baseline.
-- **Next:** **P1-02** QLoRA calibrate; reduce no-submit rate on shell/hybrid agents; shell lane — document, do not over-tune before LoRA.
+- **Next:** [P0-TW-05][p0-tw-05] BM25-hard subset on base CL (break hybrid saturation); then **P1-02** QLoRA vs [P0-TW-03][p0-tw-03] ceilings.
 
 See also: [EXPERIMENTS.md][experiments] · [ROADMAP.md][roadmap] · [DATASETS.md][datasets]
 
@@ -140,7 +168,7 @@ See also: [EXPERIMENTS.md][experiments] · [ROADMAP.md][roadmap] · [DATASETS.md
 
 ## Datasets (catalog)
 
-**In harness:** [TemporalWiki drift (easy)][tw-easy] — canonical **P0-TW-03**; deprecated **P0-TW-01** / **P0-TW-01b** (archaeology).
+**In harness:** [TemporalWiki drift (easy)][tw-easy] — canonical **P0-TW-03**; [drift CL base][tw-cl] — **P0-TW-04** (harder triples); deprecated **P0-TW-01** / **P0-TW-01b** (archaeology).
 
 **Roadmap / literature:** [full dataset index][datasets] (StreamingQA, PAT-Questions, ChronoQA, TemporalWiki 2022, narrative benchmarks, unlearning refs, custom repo/story plans).
 
@@ -193,6 +221,12 @@ Do **not** duplicate every calibrate run here; use the campaign log for narrativ
 [charter-blog]: https://haowjy.github.io/blog/layered-latent-memory-grafts/
 [development]: DEVELOPMENT.md
 [tw-easy]: https://huggingface.co/datasets/saxenan3/temporalwiki-drift-cl-easy
+[tw-cl]: https://huggingface.co/datasets/saxenan3/temporalwiki-drift-cl
+[p0-tw-04]: llmg/experiments/P0-TW-04
+[p0-tw-05]: llmg/experiments/P0-TW-05
+[run-p0-tw-04-cal]: llmg/runs/20260525-184358_P0-TW-04
+[run-p0-tw-04-off]: llmg/runs/20260525-184453_P0-TW-04
+[commit-d894068]: https://github.com/haowjy/autoresearch-llmg/commit/d894068
 [experiments]: llmg/EXPERIMENTS.md
 [roadmap]: llmg/ROADMAP.md
 [datasets]: llmg/DATASETS.md

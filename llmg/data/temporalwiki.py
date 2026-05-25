@@ -1,14 +1,32 @@
-"""Load TemporalWiki drift CL (easy) from Hugging Face cache."""
+"""Load TemporalWiki drift CL variants from Hugging Face cache."""
 
 from __future__ import annotations
 
+from typing import Any
+
 from datasets import Dataset, DatasetDict, load_dataset
 
-DATASET_ID = "saxenan3/temporalwiki-drift-cl-easy"
+DATASET_ID_EASY = "saxenan3/temporalwiki-drift-cl-easy"
+DATASET_ID_CL = "saxenan3/temporalwiki-drift-cl"
+# Back-compat alias for corpus_export and legacy callers.
+DATASET_ID = DATASET_ID_EASY
 
 
 def load_tw_easy() -> DatasetDict:
-    return load_dataset(DATASET_ID)
+    return load_dataset(DATASET_ID_EASY)
+
+
+def load_tw_cl() -> DatasetDict:
+    """Base CL variant: triples + articles (no NL `question` column)."""
+    return load_dataset(DATASET_ID_CL)
+
+
+def cl_query_from_row(row: dict[str, Any]) -> str:
+    """Deterministic retrieval query from a base-variant triple row."""
+    subj = row["subject_sitelink"]
+    rel = row["relation"]
+    snap = row["snapshot_new"]
+    return f"What is the {rel} of {subj} as of {snap}?"
 
 
 def dedupe_articles(split: Dataset) -> dict[str, str]:
