@@ -1,9 +1,14 @@
-"""Tool definitions for native function-calling agents."""
+"""Tool definitions for native function-calling agents.
+
+Harness note: `agent_term_hybrid` keeps read_file default (first 4000 chars, no grep_file).
+`agent_term_hybrid_deep` adds grep_file and documents offset/limit pagination for long articles.
+"""
 
 from __future__ import annotations
 
 import json
 import re
+import shlex
 from pathlib import Path
 from typing import Any, Callable, Literal
 
@@ -14,7 +19,12 @@ from llmg.agent.state import AgentEpisodeState
 from llmg.memory.fs_store import FsStore
 
 ToolFn = Callable[..., str]
-AgentToolset = Literal["shell", "hybrid", "full"]
+AgentToolset = Literal["shell", "hybrid", "hybrid_deep", "full"]
+
+READ_FILE_DEFAULT_LIMIT = 4000
+READ_FILE_MAX_LIMIT = 8000
+GREP_FILE_OUTPUT_MAX = 2000
+GREP_FILE_MAX_MATCHES = 50
 
 # Bounds aligned with TemporalWiki `object` gold (short phrase, not prose).
 SUBMIT_ANSWER_MAX_WORDS = 15
@@ -114,7 +124,7 @@ def _record_retrieval_from_tool(
         if doc_id and doc_id not in retrieved_doc_ids:
             retrieved_doc_ids.append(doc_id)
 
-    if name == "read_file":
+    if name in ("read_file", "grep_file"):
         rel = str(arguments.get("path", ""))
         path = (sandbox.workspace / rel).resolve()
         _add(fs_store.doc_id_from_path(path))
@@ -138,6 +148,17 @@ def _record_retrieval_from_tool(
                 _add(fs_store.doc_id_from_path(path))
 
 
+def _resolve_workspace_file(sandbox: AgentSandbox, path: str) -> Path | str:
+    """Return resolved file path, or an error string."""
+    rel = path.strip().lstrip("/")
+    if not rel:
+        return "error: empty path"
+    file_path = (sandbox.workspace / rel).resolve()
+    if not str(file_path).startswith(str(sandbox.workspace.resolve())):
+        return "error: path escapes workspace"
+    return file_path
+
+
 def make_tool_functions(
     *,
     sandbox: AgentSandbox,
@@ -147,7 +168,9 @@ def make_tool_functions(
 ) -> tuple[list[ToolFn], dict[str, ToolFn]]:
     """Build Python tools for tokenizer.apply_chat_template(tools=...)."""
     hybrid_index = (
-        hybrid_index_from_fs(sandbox.workspace) if toolset in ("hybrid", "full") else None
+        hybrid_index_from_fs(sandbox.workspace)
+        if toolset in ("hybrid", "hybrid_deep", "full")
+        else None
     )
 
     def run_shell(command: str) -> str:
@@ -171,21 +194,72 @@ def make_tool_functions(
             parts.append(f"stderr:\n{result.stderr}")
         return "\n".join(parts)
 
-    def read_file(path: str) -> str:
-        """Read a markdown article under the corpus workspace.
+    def read_file(path: str, offset: int = 0, limit: int = READ_FILE_DEFAULT_LIMIT) -> str:
+        """Read a slice of a markdown article under the corpus workspace.
+
+        After search_hybrid, open the hit path here. Use offset/limit to paginate long
+        articles when the fact is not in the first slice; or use grep_file (hybrid_deep).
 
         Args:
-            path: Relative path from search output, e.g. `articles/Conner_Kent.md`.
+            path: Relative path from search output, e.g. `articles/Conner_Kent__Nov_Dec.md`.
+            offset: Character offset into the file (default 0 = start).
+            limit: Max characters to return (default 4000).
 
         Returns:
-            File body and YAML frontmatter (truncated).
+            File slice from offset (truncated to limit).
         """
-        file_path = (sandbox.workspace / path).resolve()
-        if not str(file_path).startswith(str(sandbox.workspace.resolve())):
-            return "error: path escapes workspace"
-        if not file_path.is_file():
+        resolved = _resolve_workspace_file(sandbox, path)
+        if isinstance(resolved, str):
+            return resolved
+        if not resolved.is_file():
             return f"error: not found: {path}"
-        return file_path.read_text(encoding="utf-8")[:4000]
+        off = max(0, int(offset))
+        lim = max(1, min(int(limit), READ_FILE_MAX_LIMIT))
+        text = resolved.read_text(encoding="utf-8")
+        if off >= len(text):
+            return f"(empty slice: offset {off} past end {len(text)})"
+        return text[off : off + lim]
+
+    def grep_file(path: str, pattern: str, max_matches: int = 20) -> str:
+        """Search one article file for a pattern (ripgrep or grep, no pipes).
+
+        Use on a path from search_hybrid when read_file slices miss the fact.
+
+        Args:
+            path: Relative path under the workspace, e.g. `articles/Subject__slice.md`.
+            pattern: Single-line regex or literal (no newlines).
+            max_matches: Cap on matching lines (default 20).
+
+        Returns:
+            Matching lines with line numbers (truncated).
+        """
+        resolved = _resolve_workspace_file(sandbox, path)
+        if isinstance(resolved, str):
+            return resolved
+        if not resolved.is_file():
+            return f"error: not found: {path}"
+        if not pattern or "\n" in pattern or "\r" in pattern:
+            return "error: pattern must be a non-empty single line"
+        n = max(1, min(int(max_matches), GREP_FILE_MAX_MATCHES))
+        rel = str(resolved.relative_to(sandbox.workspace))
+        pat = shlex.quote(pattern)
+        rel_q = shlex.quote(rel)
+        for cmd in (
+            f"rg -n -i -m {n} {pat} {rel_q}",
+            f"grep -n -i -m {n} -e {pat} -- {rel_q}",
+        ):
+            try:
+                result = sandbox.run(cmd)
+            except Exception as exc:
+                return f"error: {exc!r}"
+            out = (result.stdout or "").strip()
+            if out:
+                if len(out) > GREP_FILE_OUTPUT_MAX:
+                    out = out[:GREP_FILE_OUTPUT_MAX] + "\n...(truncated)"
+                return out
+            if result.returncode == 0:
+                return "no matches"
+        return "no matches"
 
     def search_hybrid(query: str, k: int = 5) -> str:
         """Search the corpus with BM25 + dense vectors (RRF fusion).
@@ -195,7 +269,8 @@ def make_tool_functions(
             k: Number of article hits to return (default 5).
 
         Returns:
-            Ranked subjects with scores and relative paths under articles/.
+            Ranked subjects with scores and relative paths under articles/. Then read_file
+            or grep_file on a hit path; paginate read_file if the fact is not visible.
         """
         if hybrid_index is None:
             return "error: hybrid index not available"
@@ -232,10 +307,12 @@ def make_tool_functions(
         return "Answer recorded. Stop calling tools."
 
     tools: list[ToolFn] = []
-    if toolset in ("hybrid", "full"):
+    if toolset in ("hybrid", "hybrid_deep", "full"):
         tools.append(search_hybrid)
     if toolset in ("shell", "full"):
         tools.append(run_shell)
+    if toolset == "hybrid_deep":
+        tools.append(grep_file)
     tools.extend([read_file, submit_answer])
     by_name = {t.__name__: t for t in tools}
     return tools, by_name

@@ -137,6 +137,8 @@ Shell agent (`test`, v3): **0.69** recall / **0.37** temporal — pinned as `ret
 | Tool stdout cap **2000** chars (VRAM probe on stress rows) | default in code |
 | Cross-turn KV removed; `model.generate` per step | v3 |
 
+- **2026-05-25 (optional):** `agent_term_hybrid_deep` — paginated `read_file` + in-file `grep_file`; official `agent_term_hybrid` tool surface unchanged for matrix comparability.
+
 **Intentionally not fixing (would confound baselines):** prompt edits for slice/`as_of` discipline, sandbox blocking “bad” greps, raising `read_file` cap, rewriting tool docs. Revisit only as a **forked** ablation (e.g. coached shell) after **P1-02**.
 
 **How to read shell vs hybrid numbers:** shell **0.69 / 0.37** (`test` recall / temporal, v3) is “weak agent + shell tools”; hybrid **1.0 / 0.95** is “same model + structured retrieval tool.” v3 shell `test` dropped vs v2 — likely mix of 16-step context growth, 2000-char tool cap, and same stereotyped grep; not prompt-tuned. Do not optimize shell into hybrid-like behavior and still call it the same baseline.

@@ -32,7 +32,9 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("llmg.run")
 
-AGENT_SEARCH_MODES = frozenset({"agent_term_basic", "agent_term_hybrid"})
+AGENT_SEARCH_MODES = frozenset(
+    {"agent_term_basic", "agent_term_hybrid", "agent_term_hybrid_deep"}
+)
 
 EvalRowsFn = Callable[
     [DatasetDict, str, int | None],
@@ -77,6 +79,8 @@ def eval_rows_cl(
 
 
 def _agent_toolset(search_mode: str) -> AgentToolset:
+    if search_mode == "agent_term_hybrid_deep":
+        return "hybrid_deep"
     if search_mode == "agent_term_hybrid":
         return "hybrid"
     return "shell"
@@ -441,6 +445,12 @@ def run_matrix(
             metrics["answer_cosine"] = float(row.get("answer_cosine", 0))
             if "answer_cosine_hit_rate" in row:
                 metrics["answer_cosine_hit_rate"] = float(row["answer_cosine_hit_rate"])
+        if row.get("search_mode") == "agent_term_hybrid_deep" and row.get("eval_split") == "test":
+            metrics["retrieval_recall@5_deep"] = float(row.get("retrieval_recall@k", 0))
+            metrics["temporal_recall@5_deep"] = float(row.get("temporal_recall@k", 0))
+            metrics["answer_cosine_deep"] = float(row.get("answer_cosine", 0))
+            if "answer_cosine_hit_rate" in row:
+                metrics["answer_cosine_hit_rate_deep"] = float(row["answer_cosine_hit_rate"])
 
     if "retrieval_recall@5" not in metrics and matrix_rows:
         ok = [r for r in matrix_rows if r.get("status") == "ok"]

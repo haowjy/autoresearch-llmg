@@ -197,7 +197,7 @@ class GemmaAgentLoop:
             return {"role": "assistant", "content": _clean_answer(text)}
 
     def _system_prompt(self) -> str:
-        if self.agent_toolset in ("hybrid", "full"):
+        if self.agent_toolset in ("hybrid", "hybrid_deep", "full"):
             return AGENTIC_SYSTEM_HYBRID
         return AGENTIC_SYSTEM_SHELL
 

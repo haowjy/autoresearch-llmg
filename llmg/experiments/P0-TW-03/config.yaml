@@ -80,6 +80,10 @@ params:
       search_mode: agent_term_hybrid
       eval_split: test
     - data_format: filesystem
+      index_mode: train
+      search_mode: agent_term_hybrid_deep
+      eval_split: test
+    - data_format: filesystem
       index_mode: train_stable
       search_mode: agent_term_basic
       eval_split: stable
@@ -96,5 +100,8 @@ params:
       search_mode: harness_bm25
       eval_split: test
       note: rg_tree_parity
+
+  # agent_term_hybrid_deep: search_hybrid + paginated read_file + grep_file (no run_shell).
+  # Official primary metric stays agent_term_hybrid; deep lane pins *_deep in metrics.json.
 
   wave_c_max_eval_rows: 30

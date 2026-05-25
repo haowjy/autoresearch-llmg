@@ -32,6 +32,8 @@ Wave B is a **raw agentic** loop on `google/gemma-4-E4B-it` — we measure nativ
 
 **Tools:** `agent_term_basic`: `run_shell`, `read_file`, `submit_answer`; `agent_term_hybrid`: `search_hybrid`, `read_file`, `submit_answer`.
 
+**Harness sensitivity:** Official `agent_term_hybrid` is unchanged (first 4000 chars of `read_file`, no shell). Wave B also runs `agent_term_hybrid_deep` (`search_hybrid` + `read_file(offset, limit)` + `grep_file`; metrics `retrieval_recall@5_deep`, etc.). See `llmg/agent/tools.py` and `wave_b_cells` in `config.yaml`.
+
 **Defaults (`config.yaml`):** `max_agent_steps: 16`, `k: 5`, `agent_model: google/gemma-4-E4B-it`.
 
 **Methodology:** Shell lane scores are **not** prompt-tuned for search quality (corpus-wide `grep`, weak `as_of` slice choice is expected). Do not “fix” into a coached policy before P1-02 — confounds hybrid/harness comparison. Infra only: `rg` (`scripts/install-ripgrep.sh`), tool message cap 2000 chars (VRAM). See [RESEARCH-LOG.md](../../../RESEARCH-LOG.md) § shell methodology and Meridian `experiment-log.md` § 2026-05-25.
@@ -46,6 +48,9 @@ Traces: `agent_traces/<cell>/row_<i>.jsonl` (`episode_start`, `assistant_turn`, 
 uv run python -m llmg.run --experiment P0-TW-03 --run-phase official
 # Smoke agent (5 rows):
 uv run python -m llmg.run --experiment P0-TW-03 --run-phase official --param max_eval_rows=5
+
+# Smoke hybrid_deep ablation (append cell to wave_b_cells or uncomment wave_b_hybrid_deep):
+# search_mode: agent_term_hybrid_deep — toolset hybrid_deep in llmg/agent/tools.py
 ```
 
 **Primary metric (official):** `retrieval_recall@5` is pinned to **hybrid agent + `test`**; shell agent is `retrieval_recall@5_shell` in `metrics.json`.
