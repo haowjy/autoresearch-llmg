@@ -40,8 +40,31 @@ from llmg.memory.fs_store import FsStore
 log = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "google/gemma-4-E4B-it"
-_TOOL_MSG_MAX_CHARS = 6000
-_MAX_NEW_TOKENS = 384
+_DEFAULT_TOOL_MSG_MAX_CHARS = 2000  # probe: 6000 OOM on 24GB @ 16 steps (rows 5–8)
+_DEFAULT_MAX_NEW_TOKENS = 384
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    return int(raw)
+
+
+def _tool_msg_max_chars() -> int:
+    return _env_int("LLMG_AGENT_TOOL_MSG_MAX", _DEFAULT_TOOL_MSG_MAX_CHARS)
+
+
+def _max_new_tokens() -> int:
+    return _env_int("LLMG_AGENT_MAX_NEW_TOKENS", _DEFAULT_MAX_NEW_TOKENS)
+
+
+def _empty_cache_after_episode() -> bool:
+    return os.environ.get("LLMG_AGENT_EMPTY_CACHE_EPISODE", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+    )
 
 # Minimal system text — tool schemas carry mechanics; one optional final-step nudge only.
 AGENTIC_SYSTEM_SHELL = (
@@ -96,11 +119,25 @@ class GemmaAgentLoop:
         model_name: str | None = None,
         max_steps: int = 8,
         agent_toolset: AgentToolset = "shell",
+        tool_msg_max_chars: int | None = None,
+        max_new_tokens: int | None = None,
+        empty_cache_after_episode: bool | None = None,
     ) -> None:
         self.default_corpus_root = corpus_root
         self.model_name = model_name or os.environ.get("LLMG_AGENT_MODEL", DEFAULT_MODEL)
         self.max_steps = max_steps
         self.agent_toolset = agent_toolset
+        self.tool_msg_max_chars = (
+            tool_msg_max_chars if tool_msg_max_chars is not None else _tool_msg_max_chars()
+        )
+        self.max_new_tokens = (
+            max_new_tokens if max_new_tokens is not None else _max_new_tokens()
+        )
+        self.empty_cache_after_episode = (
+            empty_cache_after_episode
+            if empty_cache_after_episode is not None
+            else _empty_cache_after_episode()
+        )
         self._model = None
         self._tokenizer = None
 
@@ -144,7 +181,7 @@ class GemmaAgentLoop:
         with torch.no_grad():
             out = self._model.generate(
                 **inputs,
-                max_new_tokens=_MAX_NEW_TOKENS,
+                max_new_tokens=self.max_new_tokens,
                 do_sample=False,
                 pad_token_id=self._tokenizer.eos_token_id,
             )
@@ -241,8 +278,8 @@ class GemmaAgentLoop:
                 )
                 for m in tool_msgs:
                     body = m.get("content", "")
-                    if len(body) > _TOOL_MSG_MAX_CHARS:
-                        m = {**m, "content": truncate_text(body, _TOOL_MSG_MAX_CHARS)}
+                    if len(body) > self.tool_msg_max_chars:
+                        m = {**m, "content": truncate_text(body, self.tool_msg_max_chars)}
                     messages.append(m)
                     write_trace(
                         trace_path,
@@ -323,6 +360,11 @@ class GemmaAgentLoop:
         )
 
         sandbox.close()
+        import torch
+
+        if torch.cuda.is_available() and self.empty_cache_after_episode:
+            torch.cuda.empty_cache()
+
         end_episode_trace(
             trace_path,
             answer=answer,

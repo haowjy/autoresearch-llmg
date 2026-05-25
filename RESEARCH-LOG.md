@@ -19,10 +19,10 @@ Gate decisions use `run_phase=official` only.
 
 | Experiment | Status | Primary metric | Best score | Commit | Latest run |
 |------------|--------|----------------|------------|--------|------------|
-| P0-TW-03 | re-baselining | `retrieval_recall@5` (hybrid agent, test; Wave B) | **1.0000** (v2) | `a0a4ee5` | `llmg/runs/20260524-163430_P0-TW-03` (in flight) |
+| P0-TW-03 | ok | `retrieval_recall@5` (hybrid agent, test; Wave B) | **1.0000** (v3) | `f3c3bbe` | `llmg/runs/20260525-144755_P0-TW-03` |
 | P1-02 | planned | `retrieval_recall@5` (LoRA + RAG) | — | `15e6c19` | — |
 
-*Last updated: 2026-05-24. **Canonical Phase 0 RAG** = [P0-TW-03][p0-tw-03] corpus v2 (~1004 versioned `doc_id`s). Harness BM25 `test` subject recall@5 **~0.91** (supersedes collapsed-index **0.93**). Agent **official v3** (16 steps, raw loop; cross-turn KV removed) [in flight][run-p0-tw-03-off-v3]; headline recall still **v2** ([run-p0-tw-03-off-v2][run-p0-tw-03-off-v2]) until v3 completes.*
+*Last updated: 2026-05-25. **Canonical Phase 0 RAG** = [P0-TW-03][p0-tw-03] corpus v2 (~1004 versioned `doc_id`s). Harness BM25 `test` subject recall@5 **~0.91** (supersedes collapsed-index **0.93**). Agent **official v3** (16 steps, raw loop, tool cap 2000, `rg` on PATH): [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3] (~2h 15m, ok). Prior agent table: [v2 (8 steps)][run-p0-tw-03-off-v2]. See [shell methodology](#shell-agent-methodology-do-not-over-tune) below.*
 
 ### Agent policy (official v3 — current harness default)
 
@@ -32,9 +32,11 @@ Gate decisions use `run_phase=official` only.
 | Mid-loop nudges | removed earlier | **none** |
 | Final-step nudge | — | at `max_steps - 2`: “Answer with submit_answer…” |
 | Cross-turn KV | none | removed (v2-style `model.generate` per step) |
+| Tool message cap (shell) | 6000 chars | **2000** (VRAM; not a retrieval tweak) |
+| `rg` on host | often missing | **yes** ([install-ripgrep][install-rg]) |
 | Heuristic bootstrap / `rg`→`grep` | off | off |
 
-Code: v3 agent loop (16 steps, no cross-turn cache). Smoke (2 rows/cell): [run-p0-tw-03-smoke-v3][run-p0-tw-03-smoke-v3]. Full official Wave B: [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3].
+Code: [f3c3bbe][commit-f3c3bbe] (16 steps, no cross-turn cache, tool cap 2000). Smoke (2 rows/cell): [run-p0-tw-03-smoke-v3][run-p0-tw-03-smoke-v3]. Full official Wave B: [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3].
 
 ### Deprecated (collapsed index — archaeology)
 
@@ -49,9 +51,24 @@ Superseded by [P0-TW-03][p0-tw-03] v2 harness BM25 cells; runners remain for his
 
 Orchestrator: [P0-TW-03][p0-tw-03]. Calibrate: [run-p0-tw-03-cal-v2][run-p0-tw-03-cal-v2]. KB: [phase0-baselines].
 
+#### Official v3 — 16 agent steps (`f3c3bbe`, [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3])
+
+**Canonical agent baseline** (2026-05-25, ~8128 s). Policy: 16 steps, no mid-loop nudges, final-step `submit_answer` nudge, cross-turn KV removed, tool stdout cap **2000**, `rg` installed.
+
+| Cell | recall@5 | temporal@5 | answer_em | answer_cosine | notes |
+|------|----------|--------------|-----------|---------------|-------|
+| fs + `agent_term_basic` + `test` | **0.6933** | **0.3733** | 0.1533 | 0.2785 | shell; ↓ vs v2 (0.84 / 0.65) |
+| fs + `agent_term_hybrid` + `test` | **1.0000** | **0.9533** | 0.2000 | 0.3167 | hybrid; primary metric |
+| fs + `agent_term_basic` + `stable` | **0.9000** | **0.9000** | 0.4000 | 0.7101 | shell stable |
+| fs + `agent_term_hybrid` + `stable` | **0.9600** | **0.9600** | 0.3600 | 0.6937 | hybrid stable |
+| sqlite + `agent_term_basic` + `stable` | **0.9000** | **0.9000** | 0.4000 | 0.7129 | same as fs shell on stable |
+| fs + harness_bm25 + `test` (parity) | **0.9067** | **0.8600** | — | — | harness on exported corpus |
+
+Official Wave B ~2h 15m. Traces: structured JSONL under `agent_traces/`.
+
 #### Official v2 — 8 agent steps (`15e6c19`, [run-p0-tw-03-off-v2][run-p0-tw-03-off-v2])
 
-Superseded for **agent** rows when v3 completes; harness calibrate unchanged.
+Superseded for **agent** headline rows; kept for comparison. Harness calibrate unchanged.
 
 | Cell | recall@5 | temporal@5 | answer_em | answer_cosine | notes |
 |------|----------|--------------|-----------|---------------|-------|
@@ -64,19 +81,44 @@ Superseded for **agent** rows when v3 completes; harness calibrate unchanged.
 
 Official Wave B ~84 min. Traces: structured JSONL under `agent_traces/`.
 
-#### Official v3 — 16 agent steps (`a0a4ee5`, [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3])
-
-**In flight** (full `test` + `stable`; started 2026-05-24). Replace v2 table above when `matrix_results.tsv` lands. Smoke only (2 rows/cell): [run-p0-tw-03-smoke-v3][run-p0-tw-03-smoke-v3] — not comparable to full eval.
-
-Prior pre-v2 runs: [run-p0-tw-03-off][run-p0-tw-03-off].
+Prior pre-v2 runs: [run-p0-tw-03-off][run-p0-tw-03-off]. Aborted v3 attempts: [OOM 035045][run-p0-tw-03-off-v3-oom], stale [163430][run-p0-tw-03-off-v3-stale].
 
 Calibrate Wave A ([run-p0-tw-03-cal-v2][run-p0-tw-03-cal-v2]): **BM25** recall/temporal **0.91** / **0.86** (`test`), **0.78** / **0.78** (`stable`); **hybrid** **0.97** / **0.95** (`test`), **0.90** / **0.90** (`stable`); **rg** ~0.02 / 0.01 (install [ripgrep][ripgrep] for real rg baseline).
 
-Shell agent (`test`): **0.84** recall / **0.65** temporal — pinned as `retrieval_recall@5_shell` in run metrics.
+Shell agent (`test`, v3): **0.69** recall / **0.37** temporal — pinned as `retrieval_recall@5_shell` in run metrics (v2 was **0.84** / **0.65**).
+
+### Shell agent methodology (do not over-tune)
+
+**Lane:** `agent_term_basic` — filesystem store, allowlisted shell (`run_shell`, `read_file`, `submit_answer`). **Not** the Phase 0 retrieval ceiling; that is harness BM25 / **hybrid** agent (`search_hybrid`, recall **1.0** on `test` v3).
+
+**What we measure:** raw Gemma 4 native tool use under a **minimal** system line (“corpus under `articles/`…”). No mid-loop coaching. One final-step `submit_answer` nudge at `max_steps - 2` only.
+
+**Observed behavior (traces, v2 + v3 attempts):**
+
+1. **Ritual search:** `rg -i '<subject>' articles/` → (when `rg` missing) `grep -ri '<subject>' articles/` — every episode; searches the **whole tree**, not one `Subject__slice.md`.
+2. **When stuck:** corpus-wide keyword greps from the question, e.g. `grep -ri 'record label' articles/` — matches many unrelated articles; blows context (OOM at 6000-char tool payloads on 24GB GPU).
+3. **Temporal gap:** rarely picks the slice where YAML `last_edited` matches question `as_of`; `read_file` returns only the **first 4000** chars of long articles, so facts below the fold look “missing.”
+4. **Tool spec nudges (1):** `run_shell` docstring says *Prefer `rg -i 'term' articles/`* — reinforces corpus-wide search. System prompt does **not** mention `rg`.
+
+**Not our fault (model + sparse eval):** generic greps, prose loops, wrong slice, low `submit_answer` rate.
+
+**Our fault (infra only — fix these):**
+
+| Fix | Status |
+|-----|--------|
+| Install `rg` ([install-ripgrep][install-rg]) | done |
+| Tool stdout cap **2000** chars (VRAM probe on stress rows) | default in code |
+| Cross-turn KV removed; `model.generate` per step | v3 |
+
+**Intentionally not fixing (would confound baselines):** prompt edits for slice/`as_of` discipline, sandbox blocking “bad” greps, raising `read_file` cap, rewriting tool docs. Revisit only as a **forked** ablation (e.g. coached shell) after **P1-02**.
+
+**How to read shell vs hybrid numbers:** shell **0.69 / 0.37** (`test` recall / temporal, v3) is “weak agent + shell tools”; hybrid **1.0 / 0.95** is “same model + structured retrieval tool.” v3 shell `test` dropped vs v2 — likely mix of 16-step context growth, 2000-char tool cap, and same stereotyped grep; not prompt-tuned. Do not optimize shell into hybrid-like behavior and still call it the same baseline.
+
+Campaign narrative: [experiment-log § 2026-05-25][campaign-shell-methodology].
 
 ### Answer quality (Gemma 4, `submit_answer`)
 
-Numbers below are **v2 (8 steps)** until v3 official completes; 16 steps targets lower no-submit rate. Headline `answer_cosine` (~0.43–0.48) blends **empty submits** (no `submit_answer` before step limit). Re-score from traces ([analyze-agent-answers][analyze-agent-answers]):
+Headline `answer_cosine` on v3 `test` is lower than v2 (hybrid **0.32**, shell **0.28**) and still blends **empty submits**. Re-score answered-only from v3 traces ([analyze-agent-answers][analyze-agent-answers]). v2 answered-only reference:
 
 | Cell | EM (all rows) | cos≥0.85 (all) | cos mean (answered only) | cos≥0.85 (answered) | no submit |
 |------|---------------|----------------|--------------------------|---------------------|-----------|
@@ -87,10 +129,10 @@ Among **answered** rows, ~**43–47%** are semantically on-target (MiniLM ≥0.8
 
 ### Program snapshot
 
-- **Phase 0 (canonical):** [P0-TW-03][p0-tw-03] on [TemporalWiki][tw-easy] corpus v2 — harness BM25 **0.91** / **0.86** (`test`); hybrid harness **0.97** / **0.90**; agent **v2 (8 steps):** shell **0.84** / **0.65** temporal on `test`, hybrid **1.0** / **0.97**; **v3 (16 steps)** official re-baseline [in flight][run-p0-tw-03-off-v3].
+- **Phase 0 (canonical):** [P0-TW-03][p0-tw-03] on [TemporalWiki][tw-easy] corpus v2 — harness BM25 **0.91** / **0.86** (`test`); hybrid harness **0.97** / **0.90**; agent **v3 (16 steps):** shell **0.69** / **0.37** temporal on `test`, hybrid **1.0** / **0.95** ([official v3][run-p0-tw-03-off-v3]).
 - **Gate 0:** passed on v2 matrix (2026-05-24); see [stage.md][campaign-stage].
 - **Deprecated (archaeology):** [P0-TW-01][p0-tw-01] / [P0-TW-01b][p0-tw-01b] — collapsed-index BM25 (**0.93** / **0.76** official); not comparable to v2 without re-baseline.
-- **Next:** **P1-02** QLoRA calibrate; reduce no-submit rate; optional `ripgrep` for rg harness row.
+- **Next:** **P1-02** QLoRA calibrate; reduce no-submit rate on shell/hybrid agents; shell lane — document, do not over-tune before LoRA.
 
 See also: [EXPERIMENTS.md][experiments] · [ROADMAP.md][roadmap] · [DATASETS.md][datasets]
 
@@ -161,11 +203,16 @@ Do **not** duplicate every calibrate run here; use the campaign log for narrativ
 [run-p0-tw-03-cal-v2]: llmg/runs/20260524-020649_P0-TW-03
 [run-p0-tw-03-off]: llmg/runs/20260523-231910_P0-TW-03
 [run-p0-tw-03-off-v2]: llmg/runs/20260524-023355_P0-TW-03
-[run-p0-tw-03-off-v3]: llmg/runs/20260524-163430_P0-TW-03
+[run-p0-tw-03-off-v3]: llmg/runs/20260525-144755_P0-TW-03
+[run-p0-tw-03-off-v3-stale]: llmg/runs/20260524-163430_P0-TW-03
+[run-p0-tw-03-off-v3-oom]: llmg/runs/20260525-035045_P0-TW-03
+[commit-f3c3bbe]: https://github.com/haowjy/autoresearch-llmg/commit/f3c3bbe
 [run-p0-tw-03-smoke-v3]: llmg/runs/20260524-144153_P0-TW-03
 [run-p0-tw-03-hybrid]: llmg/runs/20260524-001722_P0-TW-03
 [analyze-agent-answers]: scripts/analyze_agent_answers.py
 [ripgrep]: https://github.com/BurntSushi/ripgrep#installation
+[install-rg]: scripts/install-ripgrep.sh
+[campaign-shell-methodology]: https://github.com/haowjy/research-docs/blob/main/llmg/work/llmg-v1-first-experiment/experiment-log.md#2026-05-25--shell-agent-methodology-do-not-over-tune
 [run-p0-tw-03-off-legacy]: llmg/runs/20260523-180602_P0-TW-03
 [phase0-baselines]: https://github.com/haowjy/research-docs/blob/main/llmg/kb/wiki/phase0-baselines.md
 [run-p0-tw-01b]: llmg/runs/20260523-154507_P0-TW-01b

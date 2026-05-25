@@ -34,9 +34,11 @@ Wave B is a **raw agentic** loop on `google/gemma-4-E4B-it` — we measure nativ
 
 **Defaults (`config.yaml`):** `max_agent_steps: 16`, `k: 5`, `agent_model: google/gemma-4-E4B-it`.
 
+**Methodology:** Shell lane scores are **not** prompt-tuned for search quality (corpus-wide `grep`, weak `as_of` slice choice is expected). Do not “fix” into a coached policy before P1-02 — confounds hybrid/harness comparison. Infra only: `rg` (`scripts/install-ripgrep.sh`), tool message cap 2000 chars (VRAM). See [RESEARCH-LOG.md](../../../RESEARCH-LOG.md) § shell methodology and Meridian `experiment-log.md` § 2026-05-25.
+
 Each step: full `apply_chat_template` + one `model.generate` call (within-turn KV is automatic) → tool calls → append to `messages` until `submit_answer` or `max_agent_steps`.
 
-**Baseline history:** official v2 used **8** steps ([20260524-023355](../../runs/20260524-023355_P0-TW-03)); current harness default is **16** (v3 official [20260524-163430](../../runs/20260524-163430_P0-TW-03) when complete).
+**Baseline history:** official v2 used **8** steps ([20260524-023355](../../runs/20260524-023355_P0-TW-03)); **official v3** uses **16** steps, tool cap 2000, no cross-turn KV ([20260525-144755](../../runs/20260525-144755_P0-TW-03), commit `f3c3bbe`).
 
 Traces: `agent_traces/<cell>/row_<i>.jsonl` (`episode_start`, `assistant_turn`, `tool_result`, `sandbox`, `episode_end`). See [runs/README.md](../../runs/README.md).
 

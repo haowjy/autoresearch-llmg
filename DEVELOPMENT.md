@@ -45,13 +45,15 @@ Creates `.venv/` at repo root. Run experiments with `uv run python -m llmg.run`,
 
 **GPU:** Phase 0 harness rows in **P0-TW-03** are CPU-only (BM25); Wave B agents need an NVIDIA GPU (target: RTX 3090 24GB, `google/gemma-4-E4B-it`). LoRA phases use the same GPU.
 
-**Optional — ripgrep** (P0-TW-03 `harness_rg` baseline):
+**ripgrep (`rg`)** — required for Wave B shell agent (tool docstring prefers `rg`; model tries it first) and for `harness_rg`:
 
 ```bash
-sudo apt install ripgrep   # or: cargo install ripgrep
+./scripts/install-ripgrep.sh   # ~/.local/bin/rg, no sudo
+# or: sudo apt install ripgrep
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Without `rg` on `PATH`, the harness falls back to `grep` (agent sandbox) or Python scan; recall stays ~2% on `test`.
+The agent sandbox resolves `rg` from `~/.local/bin` even if your shell PATH omits it. Without `rg`, every episode wastes a turn on exit 127 then falls back to `grep -ri`.
 
 ---
 

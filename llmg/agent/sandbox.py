@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import shlex
 import subprocess
 import time
@@ -18,6 +19,21 @@ ALLOWED_BINARIES = frozenset(
 )
 DEFAULT_MAX_BYTES = 256_000
 DEFAULT_TIMEOUT_S = 30.0
+
+# Subprocess uses argv[0] only; prepend common install dirs (see scripts/install-ripgrep.sh).
+_EXTRA_PATH_DIRS = (
+    Path.home() / ".local" / "bin",
+    Path("/usr/local/bin"),
+)
+
+
+def _resolve_binary(name: str) -> str:
+    """Return a full path when rg/grep live outside the parent process PATH."""
+    for directory in _EXTRA_PATH_DIRS:
+        candidate = directory / name
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return name
 
 
 @dataclass
@@ -78,6 +94,7 @@ class AgentSandbox:
         binary = Path(parts[0]).name
         if binary not in ALLOWED_BINARIES:
             raise ValueError(f"command {binary!r} not in allowlist")
+        parts[0] = _resolve_binary(binary)
         return parts
 
     def run(self, cmd: str) -> CommandResult:
