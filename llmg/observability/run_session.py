@@ -32,7 +32,7 @@ class RunSession:
     primary_metric: str = ""
     score: float | None = None
     status: str = "ok"
-    _t0: float = field(default_factory=time.monotonic, repr=False)
+    _t0: float = field(default_factory=time.perf_counter, repr=False)
     _logger: logging.Logger = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -77,7 +77,7 @@ class RunSession:
         self.primary_metric = primary
         self.score = float(metrics.get(primary, metrics.get("score", 0.0)))
 
-        elapsed = time.monotonic() - self._t0
+        elapsed = time.perf_counter() - self._t0
         meta = _gather_meta(elapsed)
         (self.run_dir / "metrics.json").write_text(
             json.dumps(metrics, indent=2, sort_keys=True) + "\n",
@@ -106,7 +106,7 @@ class RunSession:
         (self.run_dir / "traceback.txt").write_text(
             traceback.format_exc(), encoding="utf-8"
         )
-        elapsed = time.monotonic() - self._t0
+        elapsed = time.perf_counter() - self._t0
         meta = _gather_meta(elapsed)
         meta["error"] = repr(exc)
         (self.run_dir / "meta.json").write_text(
@@ -180,8 +180,10 @@ def _gpu_memory_gb() -> float:
 
 
 def _gather_meta(elapsed_s: float) -> dict[str, Any]:
+    wall = round(elapsed_s, 4)
     return {
-        "elapsed_s": round(elapsed_s, 3),
+        "elapsed_s": wall,
+        "experiment_wall_s": wall,
         "hostname": platform.node(),
         "pid": os.getpid(),
         "memory_gb": _gpu_memory_gb(),
@@ -196,7 +198,7 @@ def _format_summary(session: RunSession, metrics: dict[str, float], meta: dict[s
         f"- **run_dir:** `{session.run_dir}`",
         f"- **phase:** {session.run_phase}",
         f"- **status:** {session.status}",
-        f"- **elapsed:** {meta.get('elapsed_s')}s",
+        f"- **elapsed:** {meta.get('experiment_wall_s', meta.get('elapsed_s'))}s",
         "",
         "## Primary",
         "",
@@ -207,7 +209,19 @@ def _format_summary(session: RunSession, metrics: dict[str, float], meta: dict[s
     ]
     for k, v in sorted(metrics.items()):
         lines.append(f"- `{k}`: {v}")
-    lines.extend(["", "## Files", "", "- `run.log` — full text log", "- `config.json` — argv + git commit", "- `metrics.json` — machine-readable scores", "- `meta.json` — timing + host", ""])
+    lines.extend(
+        [
+            "",
+            "## Files",
+            "",
+            "- `run.log` — full text log",
+            "- `config.json` — argv + git commit",
+            "- `metrics.json` — machine-readable scores",
+            "- `meta.json` — host + experiment_wall_s",
+            "- `timing.json` — per-phase wall times (when recorded)",
+            "",
+        ]
+    )
     return "\n".join(lines)
 
 

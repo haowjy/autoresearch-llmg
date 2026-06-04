@@ -1,0 +1,11 @@
+experiment_id: P0-TW-05
+run_mode: eval_only
+primary_metric: retrieval_recall@5
+description: BM25-hard subset on TemporalWiki drift CL base
+
+params:
+  k: 5
+  agent_model: google/gemma-4-E4B-it
+  max_agent_steps: 16
+  max_hard_rows: 10
+  run_agent: null

@@ -21,6 +21,8 @@ dependencies = [
     "rustbpe>=0.1.0",
     "tiktoken>=0.11.0",
     "torch==2.9.1",
+    "peft>=0.19.1",
+    "bitsandbytes>=0.49.2",
 ]
 
 [tool.uv.sources]

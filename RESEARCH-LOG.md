@@ -19,13 +19,31 @@ Gate decisions use `run_phase=official` only.
 
 | Experiment | Status | Primary metric | Best score | Commit | Latest run |
 |------------|--------|----------------|------------|--------|------------|
-| P0-TW-03 | ok | `retrieval_recall@5` (hybrid agent, test; Wave B) | **1.0000** (v3) | `f3c3bbe` | `llmg/runs/20260525-144755_P0-TW-03` |
+| P0-TW-03 | ok | `retrieval_recall@5` (hybrid agent, test; Wave B) | **1.0000** (v3 / v4) | `f3c3bbe` / `b1b5b86` | v3: `llmg/runs/20260525-144755_P0-TW-03` · v4: `llmg/runs/20260525-230343_P0-TW-03` |
 | P0-TW-04 | ok | `retrieval_recall@5` (hybrid agent, test; Wave B) | **1.0000** | `d894068` | `llmg/runs/20260525-184453_P0-TW-04` |
-| P1-02 | planned | `retrieval_recall@5` (LoRA + RAG) | — | `15e6c19` | — |
+| P0-TW-05 | ok | `retrieval_recall@5` (hybrid agent, BM25-hard `test` subset) | **1.0000** | `b1b5b86` | `llmg/runs/20260529-175800_P0-TW-05` |
+| P1-02 | wired | `retrieval_recall@5` (QLoRA + hybrid agent) | — | (run pending) | — |
 
-*Last updated: 2026-05-25. **Canonical Phase 0 RAG (easy)** = [P0-TW-03][p0-tw-03] corpus v2 (~1004 versioned `doc_id`s). Harness BM25 `test` subject recall@5 **~0.91** (supersedes collapsed-index **0.93**). Agent **official v3** (16 steps, raw loop, tool cap 2000, `rg` on PATH): [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3] (~2h 15m, ok). **Harder eval (base CL):** [P0-TW-04][p0-tw-04] on [tw-cl][tw-cl] — official [run-p0-tw-04-off][run-p0-tw-04-off] (~78m, ok): harness BM25 **0.77** / hybrid **0.98** `test`; hybrid agent still **1.0** / **0.99** (recall saturated). **Next:** [P0-TW-05][p0-tw-05] BM25-hard subset or tool ablation. Prior agent table: [v2 (8 steps)][run-p0-tw-03-off-v2]. See [shell methodology](#shell-agent-methodology-do-not-over-tune) below.*
+*Last updated: 2026-05-29. **Canonical Phase 0 RAG (easy)** = [P0-TW-03][p0-tw-03] corpus v2 (~1004 versioned `doc_id`s). Harness BM25 `test` subject recall@5 **~0.91** (supersedes collapsed-index **0.93**). **Pinned agent baselines:** [v3][run-p0-tw-03-off-v3] (6 cells, primary metric) and [v4][run-p0-tw-03-off-v4] (same 6 + `hybrid_deep` ablation, ~3h 36m). **Harder eval (base CL):** [P0-TW-04][p0-tw-04] — [run-p0-tw-04-off][run-p0-tw-04-off] (~78m): harness BM25 **0.77** / hybrid **0.98** `test`; hybrid agent still **1.0** / **0.99**. **BM25-hard subset:** [P0-TW-05][p0-tw-05] — [official][run-p0-tw-05-off] (~10.8m): subset **35/150**, harness BM25 **0.0**, harness hybrid **0.9143** / **0.8571** temporal, hybrid agent **1.0** / **1.0** temporal, answer EM **0.0**. Prior: [v2 (8 steps)][run-p0-tw-03-off-v2]. See [v3 vs v4](#p0-tw-03-baseline-lineage-v3-and-v4) and [shell methodology](#shell-agent-methodology-do-not-over-tune).*
 
-### Agent policy (official v3 — current harness default)
+### P0-TW-03 baseline lineage (v3 and v4)
+
+Both are **official** Wave B runs on the same corpus v2 and the same Gemma policy family. Use them together: **v3** for the canonical six-cell matrix; **v4** when you need the tool-ablation row.
+
+| | **v3** | **v4** |
+|---|--------|--------|
+| **Run** | [20260525-144755][run-p0-tw-03-off-v3] | [20260525-230343][run-p0-tw-03-off-v4] |
+| **Code** | [f3c3bbe][commit-f3c3bbe] | [b1b5b86][commit-b1b5b86] |
+| **Wave B cells** | **6** | **7** (+ `agent_term_hybrid_deep`) |
+| **Primary metric** | hybrid `test` recall@5 **1.0** | same (unchanged) |
+
+**What v3 established (plain English):** We locked in the “raw agent” harness: **16** turns per question, **no** mid-loop coaching, only a **final** nudge to call `submit_answer`, dropped the custom cross-turn KV cache (each step is a normal `model.generate`), capped tool output at **2000** characters to avoid OOM, and installed **`rg`** on the host. Official lanes: shell (`run_shell` + `read_file`), hybrid (`search_hybrid` + `read_file`), stable/sqlite repeats, and harness BM25 parity. Promoted in [d894068][commit-d894068] (docs + registry).
+
+**What v4 added on top of v3 (plain English):** A **seventh** agent lane, `agent_term_hybrid_deep`, that keeps hybrid search but adds **paginated** `read_file` (`offset` / `limit`) and in-file **`grep_file`**. The existing **`agent_term_hybrid`** tool surface was **not** changed so v3 numbers stay comparable. v4 re-ran the full v3 matrix plus this ablation. On easy TemporalWiki, deep did **not** beat hybrid on retrieval (both **1.0** / **0.95**) and answer EM was slightly **lower** (~**0.18** vs **0.21**); `grep_file` was barely used.
+
+**Commits between v3 and v4 (not all are “v4”):** [f3c3bbe][commit-f3c3bbe] → [d894068][commit-d894068] (promote v3) → [f8d32ed][commit-f8d32ed] (P0-TW-04 on base CL) → [b1b5b86][commit-b1b5b86] (hybrid_deep tools + v4 run). The **code diff** for v4 itself is mostly `llmg/agent/tools.py`, `config.yaml` Wave B cell, and matrix metrics — not a policy change to v3 lanes.
+
+### Agent policy (official v3 / v4 — harness default)
 
 | Param | v2 official | v3 (current `config.yaml`) |
 |-------|-------------|----------------------------|
@@ -37,7 +55,7 @@ Gate decisions use `run_phase=official` only.
 | `rg` on host | often missing | **yes** ([install-ripgrep][install-rg]) |
 | Heuristic bootstrap / `rg`→`grep` | off | off |
 
-Code: [f3c3bbe][commit-f3c3bbe] (16 steps, no cross-turn cache, tool cap 2000). Smoke (2 rows/cell): [run-p0-tw-03-smoke-v3][run-p0-tw-03-smoke-v3]. Full official Wave B: [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3].
+Code: [f3c3bbe][commit-f3c3bbe] (16 steps, no cross-turn cache, tool cap 2000). Smoke (2 rows/cell): [run-p0-tw-03-smoke-v3][run-p0-tw-03-smoke-v3]. Official Wave B: [v3][run-p0-tw-03-off-v3] · [v4][run-p0-tw-03-off-v4].
 
 ### Deprecated (collapsed index — archaeology)
 
@@ -72,7 +90,18 @@ Agent policy = P0-TW-03 v3 (16 steps, tool cap 2000, `rg`). Eval queries: `cl_qu
 
 vs [P0-TW-03 v3][run-p0-tw-03-off-v3]: hybrid agent recall still **1.0** (not harder for primary metric); shell recall **0.70** (↑ vs **0.69**) but temporal **0.29** (↓ vs **0.37**); harness BM25 separates (~**23%** `test` miss rate).
 
-Easy saturation motivated this hop; base CL separates **harness** lanes but not hybrid-agent recall@5. See [P0-TW-05][p0-tw-05] for next harder eval.
+Easy saturation motivated this hop; base CL separates **harness** lanes but not hybrid-agent recall@5. [P0-TW-05][p0-tw-05] then filtered to BM25-miss rows for a harder retrieval subset.
+
+### P0-TW-05 BM25-hard subset (drift CL base)
+
+P0-TW-05 filters [P0-TW-04][p0-tw-04] `test` rows to the **35/150** examples where train-index harness BM25 misses the gold subject at k=5. It is a retrieval stress subset, not an answer-quality fix.
+
+| Phase | run_dir | BM25 hard | hybrid hard | hybrid agent hard | status |
+|-------|---------|-----------|-------------|-------------------|--------|
+| calibrate | [run-p0-tw-05-cal-35][run-p0-tw-05-cal-35] | **0.0000** / 0.0000 temporal | **0.9143** / 0.8571 temporal | — | ok |
+| official | [run-p0-tw-05-off][run-p0-tw-05-off] | **0.0000** / 0.0000 temporal | **0.9143** / 0.8571 temporal | **1.0000** / 1.0000 temporal | ok (~648 s) |
+
+Interpretation: the hard subset separates BM25 from harness hybrid, but **does not break the structured hybrid-agent retrieval ceiling**. The agent still retrieves the correct subject and temporal slice on every filtered row while answer quality remains weak (`answer_em=0.0`, `answer_cosine_hit_rate=0.0286`).
 
 ### P0-TW-03 pinned cells (corpus v2)
 
@@ -80,18 +109,34 @@ Orchestrator: [P0-TW-03][p0-tw-03]. Calibrate: [run-p0-tw-03-cal-v2][run-p0-tw-0
 
 #### Official v3 — 16 agent steps (`f3c3bbe`, [run-p0-tw-03-off-v3][run-p0-tw-03-off-v3])
 
-**Canonical agent baseline** (2026-05-25, ~8128 s). Policy: 16 steps, no mid-loop nudges, final-step `submit_answer` nudge, cross-turn KV removed, tool stdout cap **2000**, `rg` installed.
+**Canonical six-cell baseline** (2026-05-25, ~8128 s). Policy: 16 steps, no mid-loop nudges, final-step `submit_answer` nudge, cross-turn KV removed, tool stdout cap **2000**, `rg` installed.
 
 | Cell | recall@5 | temporal@5 | answer_em | answer_cosine | notes |
 |------|----------|--------------|-----------|---------------|-------|
 | fs + `agent_term_basic` + `test` | **0.6933** | **0.3733** | 0.1533 | 0.2785 | shell; ↓ vs v2 (0.84 / 0.65) |
-| fs + `agent_term_hybrid` + `test` | **1.0000** | **0.9533** | 0.2000 | 0.3167 | hybrid; primary metric |
+| fs + `agent_term_hybrid` + `test` | **1.0000** | **0.9533** | 0.2000 | 0.3167 | hybrid; **primary metric** |
 | fs + `agent_term_basic` + `stable` | **0.9000** | **0.9000** | 0.4000 | 0.7101 | shell stable |
 | fs + `agent_term_hybrid` + `stable` | **0.9600** | **0.9600** | 0.3600 | 0.6937 | hybrid stable |
 | sqlite + `agent_term_basic` + `stable` | **0.9000** | **0.9000** | 0.4000 | 0.7129 | same as fs shell on stable |
 | fs + harness_bm25 + `test` (parity) | **0.9067** | **0.8600** | — | — | harness on exported corpus |
 
 Official Wave B ~2h 15m. Traces: structured JSONL under `agent_traces/`.
+
+#### Official v4 — v3 matrix + `hybrid_deep` (`b1b5b86`, [run-p0-tw-03-off-v4][run-p0-tw-03-off-v4])
+
+**Tool-ablation baseline** (2026-05-25, ~12981 s). Re-runs all v3 cells unchanged in config intent; adds `agent_term_hybrid_deep` (`search_hybrid` + paginated `read_file` + `grep_file`). **Primary metric still pinned to standard hybrid** (not deep).
+
+| Cell | recall@5 | temporal@5 | answer_em | answer_cosine | notes |
+|------|----------|--------------|-----------|---------------|-------|
+| fs + `agent_term_basic` + `test` | **0.7133** | **0.3133** | 0.1800 | 0.3051 | shell (run variance vs v3) |
+| fs + `agent_term_hybrid` + `test` | **1.0000** | **0.9533** | 0.2067 | 0.3355 | hybrid; primary metric |
+| fs + `agent_term_hybrid_deep` + `test` | **1.0000** | **0.9533** | 0.1800 | 0.3155 | deep ablation; EM ↓ vs hybrid |
+| fs + `agent_term_basic` + `stable` | **0.9000** | **0.9000** | 0.3600 | 0.6655 | shell stable |
+| fs + `agent_term_hybrid` + `stable` | **0.9600** | **0.9600** | 0.3400 | 0.6780 | hybrid stable |
+| sqlite + `agent_term_basic` + `stable` | **0.9000** | **0.9000** | 0.3600 | 0.6649 | shell stable |
+| fs + harness_bm25 + `test` (parity) | **0.9067** | **0.8600** | — | — | bit-identical to v3 |
+
+Official Wave B ~3h 36m. Use **v3** for the canonical headline row; use **v4** to cite the deep-lane negative result.
 
 #### Official v2 — 8 agent steps (`15e6c19`, [run-p0-tw-03-off-v2][run-p0-tw-03-off-v2])
 
@@ -158,11 +203,12 @@ Among **answered** rows, ~**43–47%** are semantically on-target (MiniLM ≥0.8
 
 ### Program snapshot
 
-- **Phase 0 (canonical, easy):** [P0-TW-03][p0-tw-03] on [TemporalWiki][tw-easy] corpus v2 — harness BM25 **0.91** / **0.86** (`test`); hybrid harness **0.97** / **0.90**; agent **v3 (16 steps):** shell **0.69** / **0.37** temporal on `test`, hybrid **1.0** / **0.95** ([official v3][run-p0-tw-03-off-v3]).
+- **Phase 0 (canonical, easy):** [P0-TW-03][p0-tw-03] on [TemporalWiki][tw-easy] corpus v2 — harness BM25 **0.91** / **0.86** (`test`); hybrid harness **0.97** / **0.90**; agent baselines **v3** + **v4** ([v3][run-p0-tw-03-off-v3], [v4][run-p0-tw-03-off-v4]): hybrid **1.0** / **0.95** on `test`; shell ~**0.69–0.71** recall; deep lane does not beat hybrid on answers.
 - **Phase 0 (harder, base):** [P0-TW-04][p0-tw-04] on [tw-cl][tw-cl] — harness BM25 **0.77** / hybrid **0.98** `test`; hybrid agent **1.0** / **0.99** ([official][run-p0-tw-04-off]); shell **0.70** / **0.29**.
+- **Phase 0 (BM25-hard base):** [P0-TW-05][p0-tw-05] filters [tw-cl][tw-cl] to **35/150** BM25-miss rows — harness BM25 **0.0**, harness hybrid **0.9143** / **0.8571**, hybrid agent **1.0** / **1.0** ([official][run-p0-tw-05-off]); answer EM **0.0**.
 - **Gate 0:** passed on v2 matrix (2026-05-24); see [stage.md][campaign-stage].
 - **Deprecated (archaeology):** [P0-TW-01][p0-tw-01] / [P0-TW-01b][p0-tw-01b] — collapsed-index BM25 (**0.93** / **0.76** official); not comparable to v2 without re-baseline.
-- **Next:** [P0-TW-05][p0-tw-05] BM25-hard subset on base CL (break hybrid saturation); then **P1-02** QLoRA vs [P0-TW-03][p0-tw-03] ceilings.
+- **Next:** **P1-02** naive QLoRA answer-policy work; P0 retrieval now needs a harder dataset or tool ablation to break hybrid-agent recall.
 
 See also: [EXPERIMENTS.md][experiments] · [ROADMAP.md][roadmap] · [DATASETS.md][datasets]
 
@@ -228,6 +274,8 @@ Do **not** duplicate every calibrate run here; use the campaign log for narrativ
 [p0-tw-05]: llmg/experiments/P0-TW-05
 [run-p0-tw-04-cal]: llmg/runs/20260525-184358_P0-TW-04
 [run-p0-tw-04-off]: llmg/runs/20260525-184453_P0-TW-04
+[run-p0-tw-05-cal-35]: llmg/runs/20260529-174749_P0-TW-05
+[run-p0-tw-05-off]: llmg/runs/20260529-175800_P0-TW-05
 [commit-d894068]: https://github.com/haowjy/autoresearch-llmg/commit/d894068
 [experiments]: llmg/EXPERIMENTS.md
 [roadmap]: llmg/ROADMAP.md
@@ -240,6 +288,9 @@ Do **not** duplicate every calibrate run here; use the campaign log for narrativ
 [run-p0-tw-03-off]: llmg/runs/20260523-231910_P0-TW-03
 [run-p0-tw-03-off-v2]: llmg/runs/20260524-023355_P0-TW-03
 [run-p0-tw-03-off-v3]: llmg/runs/20260525-144755_P0-TW-03
+[run-p0-tw-03-off-v4]: llmg/runs/20260525-230343_P0-TW-03
+[commit-b1b5b86]: https://github.com/haowjy/autoresearch-llmg/commit/b1b5b86
+[commit-f8d32ed]: https://github.com/haowjy/autoresearch-llmg/commit/f8d32ed
 [run-p0-tw-03-off-v3-stale]: llmg/runs/20260524-163430_P0-TW-03
 [run-p0-tw-03-off-v3-oom]: llmg/runs/20260525-035045_P0-TW-03
 [commit-f3c3bbe]: https://github.com/haowjy/autoresearch-llmg/commit/f3c3bbe

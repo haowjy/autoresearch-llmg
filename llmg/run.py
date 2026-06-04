@@ -48,6 +48,7 @@ def run_experiment(
     session.log("params=%s", params)
 
     snap = config_snapshot(spec, params)
+    snap["run_phase"] = run_phase
     (session.run_dir / "experiment_config.json").write_text(
         json.dumps(snap, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -67,6 +68,9 @@ def run_experiment(
 
 
 def main() -> int:
+    from llmg.util.hf_local import configure_hf_offline_if_requested
+
+    configure_hf_offline_if_requested()
     ids = list_experiment_ids()
     parser = argparse.ArgumentParser(
         description="Run an LLMG experiment from llmg/experiments/<ID>/",

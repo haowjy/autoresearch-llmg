@@ -11,17 +11,15 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from functools import lru_cache
 from pathlib import Path
 from typing import Callable, Literal
 
 from llmg.eval.rag.bm25 import BM25Index, tokenize
+from llmg.search.embeddings import DEFAULT_EMBED_MODEL, get_sentence_embedder
 
 log = logging.getLogger(__name__)
 
 FusionStrategy = Literal["rrf", "rerank"]
-
-DEFAULT_EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 DEFAULT_RRF_K = 60
 DEFAULT_STRATEGY: FusionStrategy = "rrf"
 DEFAULT_CAND_MULT = 4
@@ -34,13 +32,6 @@ class HybridHit:
     doc_id: str
     score: float
     rank: int
-
-
-@lru_cache(maxsize=2)
-def _load_encoder(model_name: str):
-    from sentence_transformers import SentenceTransformer
-
-    return SentenceTransformer(model_name)
 
 
 @dataclass
@@ -68,7 +59,7 @@ class HybridIndex:
             try:
                 import numpy as np
 
-                model = _load_encoder(embed_model)
+                model = get_sentence_embedder(embed_model)
                 texts = [corpus[k] for k in bm25.keys]
                 doc_embeddings = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
                 doc_embeddings = np.asarray(doc_embeddings, dtype=np.float32)
@@ -92,7 +83,7 @@ class HybridIndex:
         try:
             import numpy as np
 
-            model = _load_encoder(self.embed_model)
+            model = get_sentence_embedder(self.embed_model)
             q_emb = model.encode([query], normalize_embeddings=True, show_progress_bar=False)
             q_emb = np.asarray(q_emb, dtype=np.float32)
             scores = (self.doc_embeddings @ q_emb.T).ravel()
@@ -135,7 +126,7 @@ class HybridIndex:
         try:
             import numpy as np
 
-            model = _load_encoder(self.embed_model)
+            model = get_sentence_embedder(self.embed_model)
             keys = cands
             texts = [self.corpus[key] for key in keys]
             q_emb = model.encode([query], normalize_embeddings=True, show_progress_bar=False)

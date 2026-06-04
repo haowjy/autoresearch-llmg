@@ -11,7 +11,6 @@ log = logging.getLogger(__name__)
 # Cosine >= threshold counts as a "hit" (answer_cosine_hit_rate).
 ANSWER_COSINE_HIT_THRESHOLD = 0.85
 
-_encoder = None
 _encoder_error_logged = False
 
 
@@ -91,17 +90,16 @@ def answer_exact_match(pred: str, gold: str) -> float:
 
 
 def _answer_encoder():
-    global _encoder
-    if _encoder is None:
-        from sentence_transformers import SentenceTransformer
+    from llmg.search.embeddings import DEFAULT_EMBED_MODEL, get_sentence_embedder
 
-        _encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-    return _encoder
+    return get_sentence_embedder(DEFAULT_EMBED_MODEL)
 
 
 def clear_answer_encoder_cache() -> None:
-    global _encoder, _encoder_error_logged
-    _encoder = None
+    global _encoder_error_logged
+    from llmg.search.embeddings import clear_sentence_embedder_cache
+
+    clear_sentence_embedder_cache()
     _encoder_error_logged = False
 
 

@@ -9,3 +9,8 @@ from dataclasses import dataclass, field
 class AgentEpisodeState:
     final_answer: str | None = None
     done: bool = False
+    invalid_submit_count: int = 0
+    question: str = ""
+    as_of: str = ""
+    search_text: str = ""
+    read_file_calls: set[tuple[str, int, int]] = field(default_factory=set)

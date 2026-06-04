@@ -59,6 +59,8 @@ def end_episode_trace(
     steps: int,
     cmd_count: int,
     bytes_read: int,
+    answer_source: str = "none",
+    invalid_submit_count: int = 0,
 ) -> None:
     write_trace(
         path,
@@ -68,6 +70,8 @@ def end_episode_trace(
         steps=steps,
         cmd_count=cmd_count,
         bytes_read=bytes_read,
+        answer_source=answer_source,
+        invalid_submit_count=invalid_submit_count,
     )
 
 

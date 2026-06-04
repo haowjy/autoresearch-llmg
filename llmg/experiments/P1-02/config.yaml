@@ -1,21 +1,34 @@
 experiment_id: P1-02
 run_mode: train_eval
 primary_metric: retrieval_recall@5
-description: Protocol QLoRA on TemporalWiki + RAG eval vs P0-TW-03 ceiling
+description: Naive QLoRA SFT on TemporalWiki train Q/A + hybrid agent RAG eval
 
 params:
   k: 5
   eval_split: test
   base_model: google/gemma-4-E4B-it
-  lora_rank: 16
-  lora_alpha: 32
+  lora_rank: 8
+  lora_alpha: 16
   train_epochs: 1
-  max_train_steps: null
+  max_train_steps: 30
+  max_train_rows: null
   max_eval_rows: null
+  eval_start_row: 0
   learning_rate: 2.0e-4
   train_batch_size: 1
-  gradient_accumulation_steps: 8
-  max_seq_len: 4096
+  gradient_accumulation_steps: 4
+  max_seq_len: 2048
+  max_article_chars: 1500
+  sft_format: plain
+  agent_toolset: hybrid_deep
+  search_snippets_per_hit: null
+  eval_relation_hint: false
+  adapter_source_run: null
   corpus_index_mode: train_stable
-  rag_top_k: 5
-  use_hybrid_retrieval: true
+  max_agent_steps: 16
+  skip_train: false
+  skip_eval: false
+  # calibrate (~6.5m wall): same 30-step train cap + small eval
+  calibrate_max_train_steps: 30
+  calibrate_max_train_rows: 1500
+  calibrate_max_eval_rows: 10

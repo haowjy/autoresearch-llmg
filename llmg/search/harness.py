@@ -75,9 +75,11 @@ def retrieve_bm25(corpus: dict[str, str], query: str, k: int) -> list[str]:
 def clear_harness_caches() -> None:
     _bm25_index_cache.clear()
     _hybrid_index_cache.clear()
+    from llmg.search.embeddings import clear_sentence_embedder_cache
     from llmg.search.hybrid import clear_hybrid_index_cache
 
     clear_hybrid_index_cache()
+    clear_sentence_embedder_cache()
 
 
 def retrieve_hybrid(

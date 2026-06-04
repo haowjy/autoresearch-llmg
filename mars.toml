@@ -1,15 +1,13 @@
 [dependencies.meridian-base]
 url = "https://github.com/meridian-flow/meridian-base"
-skills = [
-    "shared-dao",
-    "intent-modeling",
-    "llm-writing",
-    "md-validation",
-    "kb-conventions",
-    "reflection",
-]
+
+[dependencies.meridian-dev-workflow]
+url = "https://github.com/haowjy/meridian-dev-workflow"
 
 [settings]
-targets = [".cursor"]
+targets = [
+    ".cursor",
+    ".codex",
+]
 models_cache_ttl_hours = 24
 agent_emission = "never"

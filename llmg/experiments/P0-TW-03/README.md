@@ -40,7 +40,7 @@ Wave B is a **raw agentic** loop on `google/gemma-4-E4B-it` — we measure nativ
 
 Each step: full `apply_chat_template` + one `model.generate` call (within-turn KV is automatic) → tool calls → append to `messages` until `submit_answer` or `max_agent_steps`.
 
-**Baseline history:** official v2 used **8** steps ([20260524-023355](../../runs/20260524-023355_P0-TW-03)); **official v3** uses **16** steps, tool cap 2000, no cross-turn KV ([20260525-144755](../../runs/20260525-144755_P0-TW-03), commit `f3c3bbe`).
+**Baseline history:** v2 — **8** steps ([20260524-023355](../../runs/20260524-023355_P0-TW-03)). **v3** — canonical six-cell matrix, **16** steps, tool cap 2000, no cross-turn KV ([20260525-144755](../../runs/20260525-144755_P0-TW-03), `f3c3bbe`). **v4** — same six cells plus `agent_term_hybrid_deep` ([20260525-230343](../../runs/20260525-230343_P0-TW-03), `b1b5b86`); hybrid lane unchanged. See [RESEARCH-LOG.md](../../../RESEARCH-LOG.md) § v3 vs v4.
 
 Traces: `agent_traces/<cell>/row_<i>.jsonl` (`episode_start`, `assistant_turn`, `tool_result`, `sandbox`, `episode_end`). See [runs/README.md](../../runs/README.md).
 
