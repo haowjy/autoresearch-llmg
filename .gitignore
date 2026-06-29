@@ -11,6 +11,10 @@ mars.lock
 .agents/
 .venv/
 
+# Synced/generated agent skill overlays. Edit source skills in local-skills/.
+.codex/skills/
+.cursor/skills/
+
 # Meridian work/kb: git@github.com:haowjy/research-docs.git (checkout in ~/.meridian/git/)
 .meridian/
 autoresearch-llmg.local.code-workspace
@@ -31,3 +35,4 @@ results.tsv
 # Per-run logs and metrics (see llmg/runs/README.md)
 llmg/runs/*
 !llmg/runs/README.md
+llmg/runs*.tar.gz
