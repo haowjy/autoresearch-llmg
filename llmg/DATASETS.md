@@ -56,7 +56,7 @@ Good for **chapter = day** synthetic curricula and stale-trap eval (retrieve ear
 
 ## Machine unlearning (reference only — not primary LLMG metric)
 
-LLMG targets **graceful supersession** (drop obsolete facts on *current* questions, retain *stable* facts). That is **not** the same as TOFU/MUSE **forget sets**. See [KB decision 0006][dec-0006].
+LLMG targets **graceful supersession** (drop obsolete facts on *current* questions, retain *stable* facts). That is **not** the same as TOFU/MUSE **forget sets**. See [the KB page on temporal datasets][dec-0006].
 
 | Benchmark | Link |
 |-----------|------|
