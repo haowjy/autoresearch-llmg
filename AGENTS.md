@@ -1,7 +1,7 @@
 # autoresearch-llmg — Layered Latent Memory Grafts
 
-Research program + Karpathy autoresearch harness. **Separate** from `~/cursor-dev` dev
-orchestration — use this repo's `.cursor/` and `/research-lead`.
+Research program + Karpathy autoresearch harness. Use this repo's `.cursor/` and
+`/research-lead`.
 
 ## Quick start (Cursor)
 
@@ -65,7 +65,7 @@ Template: bottom of the active campaign log.
 
 - **`RESEARCH-LOG.md`** — best official score per `experiment_id`; git paths in tables; no full TSV paste.  
 - **`stage.md`** — records per-experiment pass/fail; points to campaign `experiment-log.md` by path.  
-- **KB** — promote durable decisions to `llmg/kb/decisions/` in research-docs.
+- **KB** — promote what a campaign established, with its evidence, to its topic page in `llmg/kb/` (`charter.md`, `wiki/`) in research-docs.
 
 ### Link style (research logs)
 
