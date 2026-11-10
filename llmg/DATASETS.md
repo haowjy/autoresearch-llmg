@@ -107,4 +107,4 @@ LLMG targets **graceful supersession** (drop obsolete facts on *current* questio
 [tofu-hf]: https://huggingface.co/datasets/locuslab/TOFU
 [graphiti]: https://github.com/getzep/graphiti
 [wiki-temporal]: https://github.com/haowjy/research-docs/blob/main/llmg/kb/wiki/temporal-datasets.md
-[dec-0006]: https://github.com/haowjy/research-docs/blob/main/llmg/kb/decisions/0006-graceful-supersession-not-unlearning.md
+[dec-0006]: https://github.com/haowjy/research-docs/blob/main/llmg/kb/wiki/temporal-datasets.md
