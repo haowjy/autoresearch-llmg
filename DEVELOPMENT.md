@@ -193,7 +193,7 @@ List experiments: `uv run python -m llmg.run --list`.
 | Campaign log | `llmg/work/<slug>/experiment-log.md` | research-docs |
 | Machine | `results.tsv`, `llmg/runs/` | local only |
 
-Link style: `[text][ref-id]` in prose; `[ref-id]: URL` under `## References` at file bottom. See [AGENTS.md][agents].
+Link style: `[text][ref-id]` in prose; `[ref-id]: URL` under `## References` at file bottom. See `local-skills/research-artifacts/SKILL.md`.
 
 ---
 

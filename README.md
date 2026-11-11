@@ -13,7 +13,7 @@
 | [DEVELOPMENT.md][development] | Workspace, Meridian, HF, first run |
 | [RESEARCH-LOG.md][research-log] | Program index (official scores) |
 | [llmg/DATASETS.md][datasets] | **All benchmark & corpus links** |
-| [AGENTS.md][agents] | Agent + research-log rules |
+| [AGENTS.md][agents] | Agent rules |
 | [llmg/EXPERIMENTS.md][experiments] | Experiment IDs + layout |
 
 **Phase 0 (now):** RAG floor on [TemporalWiki drift (easy)][tw-easy] — canonical **`P0-TW-03`** matrix (corpus v2). `P0-TW-01` / `01b` deprecated (Gate 0 archaeology). Next: Gemma QLoRA **P1-02**.
